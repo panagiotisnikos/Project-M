@@ -4,6 +4,7 @@ public class EnemyHealth : MonoBehaviour
 {
     [SerializeField] private int maxHealth = 30;
     [SerializeField] private EnemyAI.EnemyRole role;
+    [SerializeField] private PlayerPerformanceTracker performanceTracker;
     private int currentHealth;
 
     private void Awake()
@@ -40,6 +41,10 @@ public class EnemyHealth : MonoBehaviour
     private void Die()
     {
         Debug.Log($"{gameObject.name} died.");
+        if (performanceTracker != null)
+{
+            performanceTracker.RegisterEnemyKilled();
+}
         Destroy(gameObject);
     }
 }

@@ -22,6 +22,15 @@ public class Camp : MonoBehaviour
 
     private bool isCleared;
 
+    public bool IsCleared => isCleared;
+
+    private void Awake()
+    {
+        // Automatically collect all enemies that are children of this camp.
+        enemies.Clear();
+        enemies.AddRange(GetComponentsInChildren<EnemyHealth>());
+    }
+
     private void Update()
     {
         if (isCleared)
@@ -39,7 +48,7 @@ public class Camp : MonoBehaviour
     {
         isCleared = true;
 
-        Debug.Log($"{campName} cleared!");
+        Debug.Log($"[Camp] {campName} cleared!");
 
         ApplyBossEffect();
     }
@@ -48,7 +57,7 @@ public class Camp : MonoBehaviour
     {
         if (boss == null)
         {
-            Debug.LogWarning($"{campName} has no boss reference.");
+            Debug.LogWarning($"[Camp] {campName} has no boss reference.");
             return;
         }
 

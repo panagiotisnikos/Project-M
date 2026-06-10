@@ -9,23 +9,25 @@ public class EnemyAI : MonoBehaviour
         Attack
     }
 
-    [Header("References")]
+[Header("References")]
     [SerializeField] private Transform player;
 
-    [Header("Movement")]
+[Header("Movement")]
     [SerializeField] private float moveSpeed = 3f;
     [SerializeField] private float rotationSpeed = 12f;
 
-    [Header("Ranges")]
+[Header("Ranges")]
     [SerializeField] private float detectionRange = 7f;
     [SerializeField] private float attackRange = 1.5f;
     [SerializeField] private float losePlayerRange = 10f;
 
-    [Header("Attack")]
+[Header("Attack")]
     [SerializeField] private int attackDamage = 10;
     [SerializeField] private float attackCooldown = 1.2f;
-    [Header("Role")]
+[Header("Role")]
     [SerializeField] private EnemyRole role;
+[Header("Adaptation")]
+[SerializeField] private WorldAdaptationManager worldAdaptationManager;
 private float lastAttackTime;
 
     private Rigidbody rb;
@@ -100,7 +102,7 @@ private float lastAttackTime;
     {
         Vector3 direction = GetDirectionToPlayer();
 
-        Vector3 newPosition = rb.position + direction * moveSpeed * Time.fixedDeltaTime;
+        Vector3 newPosition = rb.position + direction * GetAdaptedMoveSpeed() * Time.fixedDeltaTime;
         rb.MovePosition(newPosition);
 
         RotateTowards(direction);
@@ -158,16 +160,55 @@ private float lastAttackTime;
         return direction.normalized;
     }
     private void TryAttack()
-{
-    if (Time.time < lastAttackTime + attackCooldown)
-        return;
+    {
+       if (Time.time < lastAttackTime + GetAdaptedAttackCooldown())
+            return;
 
-    PlayerHealth playerHealth = player.GetComponent<PlayerHealth>();
+        PlayerHealth playerHealth = player.GetComponent<PlayerHealth>();
 
-    if (playerHealth == null)
-        return;
+        if (playerHealth == null || playerHealth.IsDead)
+            return;
 
-    playerHealth.TakeDamage(attackDamage);
-    lastAttackTime = Time.time;
-}
+        playerHealth.TakeDamage(attackDamage);
+        lastAttackTime = Time.time;
+    }
+    private float GetAdaptedMoveSpeed()
+    {
+        if (worldAdaptationManager == null)
+            return moveSpeed;
+
+        switch (worldAdaptationManager.CurrentState)
+        {
+            case WorldAdaptationManager.WorldState.Stable:
+                return moveSpeed * 0.75f;
+
+            case WorldAdaptationManager.WorldState.Decaying:
+                return moveSpeed * 1.35f;
+
+            default:
+                return moveSpeed;
+        }
+    }
+
+    private float GetAdaptedAttackCooldown()
+    {
+        if (worldAdaptationManager == null)
+            return attackCooldown;
+
+        switch (worldAdaptationManager.CurrentState)
+        {
+            case WorldAdaptationManager.WorldState.Stable:
+                return attackCooldown * 1.4f;
+
+            case WorldAdaptationManager.WorldState.Decaying:
+                return attackCooldown * 0.7f;
+
+            default:
+                return attackCooldown;
+        }
+    }
+    public void SetWorldAdaptationManager(WorldAdaptationManager manager)
+    {
+        worldAdaptationManager = manager;
+    }
 }
