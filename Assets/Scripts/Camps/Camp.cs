@@ -21,14 +21,13 @@ public class Camp : MonoBehaviour
     [SerializeField] private BossWeakeningReward reward;
 
     private bool isCleared;
+    private bool hasRegisteredEnemies;
 
     public bool IsCleared => isCleared;
 
     private void Awake()
     {
-        // Automatically collect all enemies that are children of this camp.
-        enemies.Clear();
-        enemies.AddRange(GetComponentsInChildren<EnemyHealth>());
+        RefreshEnemies();
     }
 
     private void Update()
@@ -36,11 +35,28 @@ public class Camp : MonoBehaviour
         if (isCleared)
             return;
 
+        // Important for spawned camps:
+        // If the camp starts empty, do not clear it before enemies are spawned.
+        if (!hasRegisteredEnemies)
+            return;
+
         enemies.RemoveAll(enemy => enemy == null);
 
         if (enemies.Count == 0)
         {
             ClearCamp();
+        }
+    }
+
+    public void RefreshEnemies()
+    {
+        enemies.Clear();
+        enemies.AddRange(GetComponentsInChildren<EnemyHealth>());
+
+        if (enemies.Count > 0)
+        {
+            hasRegisteredEnemies = true;
+            isCleared = false;
         }
     }
 

@@ -2,6 +2,7 @@ using UnityEngine;
 
 public class PlayerAttack : MonoBehaviour
 {
+    bool hitEnemy = false;
     [SerializeField] private int attackDamage = 10;
     [SerializeField] private float attackRange = 1.8f;
     [SerializeField] private float attackRadius = 0.7f;
@@ -37,9 +38,18 @@ public class PlayerAttack : MonoBehaviour
 
             if (enemyHealth != null)
             {
-                enemyHealth.TakeDamage(attackDamage);
+                enemyHealth.TakeDamage(attackDamage, transform.forward);
+                hitEnemy = true;
                 break;
             }
+        }
+        if (hitEnemy)
+        {
+            Debug.Log("Hit!");
+        }
+        else
+        {
+            Debug.Log("Miss!");
         }
 
         lastAttackTime = Time.time;
@@ -47,8 +57,12 @@ public class PlayerAttack : MonoBehaviour
 
     private void OnDrawGizmosSelected()
     {
-        Gizmos.color = Color.red;
+        Gizmos.color = Color.yellow;
         Vector3 attackCenter = transform.position + transform.forward * attackRange;
         Gizmos.DrawWireSphere(attackCenter, attackRadius);
+        Gizmos.DrawLine(
+            transform.position,
+            transform.position + transform.forward * attackRange
+        );
     }
 }

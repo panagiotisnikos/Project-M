@@ -12,8 +12,8 @@ public class WorldAdaptationManager : MonoBehaviour
     [SerializeField] private PlayerPerformanceTracker performanceTracker;
 
     [Header("Adaptation Thresholds")]
-    [SerializeField] private float stableThreshold = -5f;
-    [SerializeField] private float decayingThreshold = 10f;
+    [SerializeField] private float stableThreshold = -8f;
+    [SerializeField] private float decayingThreshold = 14f;
 
     [Header("Debug")]
     [SerializeField] private bool showDebugLogs = true;
@@ -34,7 +34,7 @@ public class WorldAdaptationManager : MonoBehaviour
         float score = performanceTracker.GetPerformanceScore();
 
         UpdateWorldState(score);
-        LogDebugInfo(score);
+        //LogDebugInfo(score);
     }
 
     private void UpdateWorldState(float score)

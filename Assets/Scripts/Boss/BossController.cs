@@ -10,6 +10,8 @@ public class BossController : MonoBehaviour
     [SerializeField] private bool canSummonMinions = true;
     [SerializeField] private bool hasDecayAura = true;
 
+    public string CurrentProfile { get; private set; } = "Unknown";
+
     private bool campDisabledHealing;
     private bool campDisabledSummons;
     private bool campDisabledDecayAura;
@@ -36,18 +38,22 @@ public class BossController : MonoBehaviour
         switch (worldAdaptationManager.CurrentState)
         {
             case WorldAdaptationManager.WorldState.Stable:
+                CurrentProfile = "Passive";
                 adaptiveHeal = false;
                 adaptiveSummons = false;
                 adaptiveDecayAura = false;
                 break;
 
+
             case WorldAdaptationManager.WorldState.Balanced:
+                CurrentProfile = "Balanced";
                 adaptiveHeal = false;
                 adaptiveSummons = true;
                 adaptiveDecayAura = false;
                 break;
 
             case WorldAdaptationManager.WorldState.Decaying:
+                CurrentProfile = "Aggressive";
                 adaptiveHeal = true;
                 adaptiveSummons = true;
                 adaptiveDecayAura = true;

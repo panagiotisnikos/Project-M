@@ -3,22 +3,52 @@ using UnityEngine;
 public class CameraFollow : MonoBehaviour
 {
     [SerializeField] private Transform target;
-    [SerializeField] private Vector3 offset = new Vector3(0f, 8f, -8f);
-    [SerializeField] private float followSpeed = 8f;
+
+    [Header("Camera")]
+    [SerializeField] private float distance = 8f;
+    [SerializeField] private float targetHeight = 1.6f;
+    [SerializeField] private float pitch = 25f;
+    [SerializeField] private float yaw = 0f;
+
+    [Header("Control")]
+    [SerializeField] private float mouseSensitivity = 3f;
+    [SerializeField] private float minPitch = -10f;
+    [SerializeField] private float maxPitch = 65f;
+    [SerializeField] private float minDistance = 4f;
+    [SerializeField] private float maxDistance = 14f;
 
     private void LateUpdate()
     {
-        if (target == null)
-            return;
+        if (target == null) return;
 
-        Vector3 targetPosition = target.position + offset;
+        if (Input.GetMouseButton(1))
+        {
+            yaw += Input.GetAxis("Mouse X") * mouseSensitivity;
+            pitch -= Input.GetAxis("Mouse Y") * mouseSensitivity;
+            pitch = Mathf.Clamp(pitch, minPitch, maxPitch);
+        }
 
-        transform.position = Vector3.Lerp(
-            transform.position,
-            targetPosition,
-            followSpeed * Time.deltaTime
-        );
+        distance -= Input.GetAxis("Mouse ScrollWheel") * 4f;
+        distance = Mathf.Clamp(distance, minDistance, maxDistance);
 
-        transform.LookAt(target.position);
+        Quaternion rotation = Quaternion.Euler(pitch, yaw, 0f);
+        Vector3 focusPoint = target.position + Vector3.up * targetHeight;
+
+        transform.position = focusPoint - rotation * Vector3.forward * distance;
+        transform.LookAt(focusPoint);
+    }
+
+    public Vector3 GetCameraForward()
+    {
+        Vector3 forward = transform.forward;
+        forward.y = 0f;
+        return forward.normalized;
+    }
+
+    public Vector3 GetCameraRight()
+    {
+        Vector3 right = transform.right;
+        right.y = 0f;
+        return right.normalized;
     }
 }

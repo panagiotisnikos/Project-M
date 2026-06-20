@@ -38,23 +38,27 @@ public class PlayerPerformanceTracker : MonoBehaviour
         if (!isTracking)
             return;
         damageTaken += damage;
-        Debug.Log($"Total damage taken: {damageTaken}");
+        //Debug.Log($"Total damage taken: {damageTaken}");
     }
     public void StopTracking()
     {
         isTracking = false;
-        Debug.Log("Performance tracking stopped. Player is dead.");
+        Debug.Log("Performance tracking stopped.");
     }
     public float GetPerformanceScore()
     {
-        /*
-         * Simple rule-based performance score:
-         * - Killing enemies increases score.
-         * - Taking damage decreases score.
-         */
-        float killScore = enemiesKilled * 10f;
-        float damagePenalty = damageTaken * 0.5f;
+        float killScore = enemiesKilled * 8f;
+        float damagePenalty = damageTaken * 0.35f;
+        float timePenalty = timeAlive * 0.05f;
 
-        return killScore - damagePenalty;
+        return killScore - damagePenalty - timePenalty;
+    }
+    public string GetPerformanceReport()
+    {
+        return
+            $"Kills: {enemiesKilled}\n" +
+            $"Damage Taken: {damageTaken}\n" +
+            $"Time Alive: {timeAlive:0.0}s\n" +
+            $"Performance Score: {GetPerformanceScore():0.0}";
     }
 }

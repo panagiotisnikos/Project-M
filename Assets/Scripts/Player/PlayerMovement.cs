@@ -4,13 +4,16 @@ public class PlayerMovement : MonoBehaviour
 {
     [SerializeField] private float moveSpeed = 6f;
     [SerializeField] private float rotationSpeed = 12f;
+    [SerializeField] private CameraFollow cameraFollow;
 
     private Rigidbody rb;
-    private Vector3 movementInput;
+    private Vector3 movementDirection;
 
     private void Awake()
     {
         rb = GetComponent<Rigidbody>();
+        rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
+        rb.interpolation = RigidbodyInterpolation.Interpolate;
     }
 
     private void Update()
@@ -18,27 +21,52 @@ public class PlayerMovement : MonoBehaviour
         float horizontal = Input.GetAxisRaw("Horizontal");
         float vertical = Input.GetAxisRaw("Vertical");
 
-        movementInput = new Vector3(horizontal, 0f, vertical).normalized;
+        Vector3 input = new Vector3(horizontal, 0f, vertical).normalized;
+
+        if (cameraFollow != null)
+        {
+            movementDirection =
+                cameraFollow.GetCameraForward() * input.z +
+                cameraFollow.GetCameraRight() * input.x;
+        }
+        else
+        {
+            movementDirection = input;
+        }
+
+        movementDirection.Normalize();
     }
 
     private void FixedUpdate()
     {
+        rb.angularVelocity = Vector3.zero;
+
         Move();
-        RotateTowardsMovement();
+
+        if (movementDirection.sqrMagnitude > 0.01f)
+        {
+            RotateTowardsMovement();
+        }
     }
 
     private void Move()
     {
-        Vector3 newPosition = rb.position + movementInput * moveSpeed * Time.fixedDeltaTime;
+        if (movementDirection.sqrMagnitude < 0.01f)
+        {
+            rb.linearVelocity = Vector3.zero;
+            return;
+        }
+
+        Vector3 newPosition = rb.position + movementDirection * moveSpeed * Time.fixedDeltaTime;
         rb.MovePosition(newPosition);
     }
 
     private void RotateTowardsMovement()
     {
-        if (movementInput == Vector3.zero)
+        if (movementDirection.sqrMagnitude < 0.01f)
             return;
 
-        Quaternion targetRotation = Quaternion.LookRotation(movementInput);
+        Quaternion targetRotation = Quaternion.LookRotation(movementDirection);
         Quaternion smoothRotation = Quaternion.Slerp(
             rb.rotation,
             targetRotation,

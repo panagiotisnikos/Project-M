@@ -3,6 +3,7 @@ using UnityEngine;
 public class DemoObjectiveManager : MonoBehaviour
 {
     [SerializeField] private Camp requiredCamp;
+    [SerializeField] private PlayerPerformanceTracker performanceTracker;
     public string CurrentObjective { get; private set; } = "Clear the camp";
     private bool demoCompleted;
     public string StatusMessage { get; private set; } = "";
@@ -21,6 +22,12 @@ public class DemoObjectiveManager : MonoBehaviour
         }
 
         demoCompleted = true;
+
+        if (performanceTracker != null)
+        {
+            performanceTracker.StopTracking();
+        }
+
         Debug.Log("[DemoObjective] Demo completed. Camp cleared and adaptive boss state demonstrated.");
         CurrentObjective = "Demo complete";
         StatusMessage = "Demo completed successfully.";
