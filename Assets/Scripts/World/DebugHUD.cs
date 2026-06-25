@@ -7,6 +7,7 @@ public class DebugHUD : MonoBehaviour
     [SerializeField] private DemoObjectiveManager demoObjectiveManager;
     [SerializeField] private BossController bossController;
     [SerializeField] private EnemyAI enemyAI;
+    [SerializeField] private CampSpawner campSpawner;
 
     private void OnGUI()
     {
@@ -29,32 +30,49 @@ public class DebugHUD : MonoBehaviour
         GUI.Label(new Rect(25, 80, 240, 20), $"Kills: {performanceTracker.EnemiesKilled}");
         GUI.Label(new Rect(25, 100, 240, 20), $"Damage: {performanceTracker.DamageTaken}");
 
-        if (demoObjectiveManager != null)
-        {
-            GUI.Label(new Rect(25, 120, 290, 20), $"Objective: {demoObjectiveManager.CurrentObjective}");
-            GUI.Label(new Rect(25, 140, 290, 20), demoObjectiveManager.StatusMessage);
-        }
-        if (bossController != null)
-        {
-            GUI.Label(new Rect(25, 160, 290, 20), $"Boss Profile: {bossController.CurrentProfile}");
-        }
         if (demoObjectiveManager != null &&
             demoObjectiveManager.CurrentObjective == "Demo complete" &&
             performanceTracker != null)
         {
-            GUI.Box(new Rect(360, 10, 260, 140), "Performance Report");
+            GUI.Box(new Rect(360, 150, 320, 170), "Final Performance Report");
 
-            GUI.Label(new Rect(375, 40, 240, 20),
+            GUI.Label(new Rect(375, 180, 290, 20),
                 $"Kills: {performanceTracker.EnemiesKilled}");
 
-            GUI.Label(new Rect(375, 60, 240, 20),
+            GUI.Label(new Rect(375, 200, 290, 20),
                 $"Damage Taken: {performanceTracker.DamageTaken}");
 
-            GUI.Label(new Rect(375, 80, 240, 20),
+            GUI.Label(new Rect(375, 220, 290, 20),
                 $"Time Alive: {performanceTracker.TimeAlive:0.0}s");
 
-            GUI.Label(new Rect(375, 100, 240, 20),
+            GUI.Label(new Rect(375, 240, 290, 20),
                 $"Score: {performanceTracker.GetPerformanceScore():0.0}");
+
+            GUI.Label(new Rect(375, 260, 290, 20),
+                $"Final State: {worldAdaptationManager.CurrentState}");
+
+            if (bossController != null)
+            {
+                GUI.Label(new Rect(375, 280, 290, 20),
+                    $"Boss Profile: {bossController.CurrentProfile}");
+            }
+        }
+        if (campSpawner != null)
+        {
+            GUI.Box(new Rect(360, 10, 320, 130), "Adaptive Decision");
+
+            if (!campSpawner.HasSpawned)
+            {
+                GUI.Label(new Rect(375, 40, 290, 20), "Adaptive Camp: Waiting");
+                GUI.Label(new Rect(375, 60, 290, 20), "Reason: Clear first camp");
+            }
+            else
+            {
+                GUI.Label(new Rect(375, 40, 290, 20), $"State: {campSpawner.LastGeneratedState}");
+                GUI.Label(new Rect(375, 60, 290, 20), $"Score: {campSpawner.LastScore:0.0}");
+                GUI.Label(new Rect(375, 80, 290, 20), $"Generated: {campSpawner.LastComposition}");
+                GUI.Label(new Rect(375, 100, 290, 20), "Reason: kills, damage, time");
+            }
         }
             }
 }
