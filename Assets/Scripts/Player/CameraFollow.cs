@@ -19,22 +19,24 @@ public class CameraFollow : MonoBehaviour
 
     private void LateUpdate()
     {
-        if (target == null) return;
+        if (target == null)
+            return;
 
-        if (Input.GetMouseButton(1))
-        {
-            yaw += Input.GetAxis("Mouse X") * mouseSensitivity;
-            pitch -= Input.GetAxis("Mouse Y") * mouseSensitivity;
-            pitch = Mathf.Clamp(pitch, minPitch, maxPitch);
-        }
+        // The camera now rotates freely with the mouse.
+        yaw += Input.GetAxis("Mouse X") * mouseSensitivity;
+        pitch -= Input.GetAxis("Mouse Y") * mouseSensitivity;
+        pitch = Mathf.Clamp(pitch, minPitch, maxPitch);
 
         distance -= Input.GetAxis("Mouse ScrollWheel") * 4f;
         distance = Mathf.Clamp(distance, minDistance, maxDistance);
 
         Quaternion rotation = Quaternion.Euler(pitch, yaw, 0f);
-        Vector3 focusPoint = target.position + Vector3.up * targetHeight;
+        Vector3 focusPoint =
+            target.position + Vector3.up * targetHeight;
 
-        transform.position = focusPoint - rotation * Vector3.forward * distance;
+        transform.position =
+            focusPoint - rotation * Vector3.forward * distance;
+
         transform.LookAt(focusPoint);
     }
 
@@ -42,6 +44,7 @@ public class CameraFollow : MonoBehaviour
     {
         Vector3 forward = transform.forward;
         forward.y = 0f;
+
         return forward.normalized;
     }
 
@@ -49,6 +52,7 @@ public class CameraFollow : MonoBehaviour
     {
         Vector3 right = transform.right;
         right.y = 0f;
+
         return right.normalized;
     }
 }

@@ -157,17 +157,20 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyAI
   player: {fileID: 0}
+  worldAdaptationManager: {fileID: 0}
+  role: 1
   moveSpeed: 2.3
   rotationSpeed: 12
   detectionRange: 12
-  attackRange: 2.7
   losePlayerRange: 18
-  attackDamage: 16
-  attackCooldown: 1.8
-  role: 1
-  worldAdaptationManager: {fileID: 0}
   stoppingDistance: 3
   resumeChaseDistance: 3.8
+  attackHitRange: 3
+  attackDamage: 16
+  attackWindupDuration: 0.6
+  attackRecoveryDuration: 0.8
+  attackTelegraphColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+  staggerColor: {r: 0, g: 1, b: 1, a: 1}
 --- !u!114 &958650685423063475
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -182,7 +185,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EnemyHealth
   maxHealth: 30
   role: 1
-  performanceTracker: {fileID: 0}
-  hitFlashDuration: 0.1
+  hitReactionDuration: 0.18
+  hitFlashDuration: 0.12
   hitFlashColor: {r: 1, g: 0, b: 0, a: 1}
   knockbackForce: 4
+  performanceTracker: {fileID: 0}
+  enemyAI: {fileID: 0}

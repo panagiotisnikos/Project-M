@@ -1498,6 +1498,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerMovement
   moveSpeed: 6
   rotationSpeed: 12
+  blockingMoveSpeedMultiplier: 0.45
+  parryWindowDuration: 0.25
   cameraFollow: {fileID: 425879696}
 --- !u!54 &1407352002
 Rigidbody:
@@ -1635,8 +1637,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerHealth
   maxHealth: 100
-  performanceTracker: {fileID: 885899398}
+  blockAngle: 120
+  blockedDamageMultiplier: 0
+  parryStaggerDuration: 1.25
   knockbackForce: 4
+  blockedKnockbackMultiplier: 0.2
+  performanceTracker: {fileID: 885899398}
+  playerMovement: {fileID: 1407352001}
 --- !u!114 &1407352008
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1656,6 +1663,7 @@ MonoBehaviour:
   enemyLayer:
     serializedVersion: 2
     m_Bits: 8
+  playerMovement: {fileID: 1407352001}
 --- !u!1 &1547865814
 GameObject:
   m_ObjectHideFlags: 0
