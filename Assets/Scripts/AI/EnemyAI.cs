@@ -33,7 +33,6 @@ public class EnemyAI : MonoBehaviour
     [SerializeField] private float detectionRange = 7f;
     [SerializeField] private float losePlayerRange = 10f;
     [SerializeField] private float stoppingDistance = 2.6f;
-    [SerializeField] private float resumeChaseDistance = 3.2f;
     [SerializeField] private float attackHitRange = 3f;
 
     [Header("Attack Timing")]
@@ -132,7 +131,17 @@ private float staggerEndTime;
                 if (Time.time >= stateEndTime)
                 {
                     PerformAttack();
-                    BeginAttackRecovery();
+
+                    /*
+                    * A successful parry changes the enemy state
+                    * to Staggered during PerformAttack().
+                    *
+                    * Do not overwrite that state with recovery.
+                    */
+                    if (currentState != EnemyState.Staggered)
+                    {
+                        BeginAttackRecovery();
+                    }
                 }
 
                 break;
@@ -424,12 +433,14 @@ private float staggerEndTime;
     }
     public void Stagger(float duration)
     {
-        if (currentState == EnemyState.Staggered)
-            return;
-
         SetTelegraphVisual(false);
 
         currentState = EnemyState.Staggered;
+
+        /*
+        * Refresh the stagger duration even if the enemy
+        * was already staggered.
+        */
         staggerEndTime = Time.time + duration;
 
         StopMoving();

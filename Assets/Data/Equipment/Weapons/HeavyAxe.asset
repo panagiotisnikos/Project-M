@@ -1,0 +1,50 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9f9e5054bcd9f244a9cbca3ebe173672, type: 3}
+  m_Name: HeavyAxe
+  m_EditorClassIdentifier: Assembly-CSharp::WeaponData
+  weaponName: HeavyAxe
+  description: 'Weapon Name: Heavy Axe
+
+    Description: Slow, stamina-heavy weapon
+    with strong commitment and impact.'
+  baseDamage: 16
+  lightAttackRange: 1.7
+  lightAttackRadius: 0.8
+  lightMovementMultiplier: 0.22
+  firstForwardStep: 0.28
+  secondForwardStep: 0.34
+  thirdForwardStep: 0.5
+  firstWindupDuration: 0.24
+  firstRecoveryDuration: 0.4
+  firstDamageMultiplier: 1
+  secondWindupDuration: 0.24
+  secondRecoveryDuration: 0.4
+  secondDamageMultiplier: 1.1
+  thirdWindupDuration: 0.34
+  thirdRecoveryDuration: 0.6
+  thirdDamageMultiplier: 1.5
+  heavyDamageMultiplier: 2.4
+  heavyRange: 2.1
+  heavyRadius: 1
+  heavyWindupDuration: 0.8
+  heavyRecoveryDuration: 1
+  heavyKnockbackMultiplier: 2.5
+  heavyHitReactionDuration: 0.85
+  heavyMovementMultiplier: 0.1
+  heavyForwardStep: 0.65
+  firstLightStaminaCost: 12
+  secondLightStaminaCost: 14
+  thirdLightStaminaCost: 18
+  heavyStaminaCost: 32
+  lightHitStopDuration: 0.08
+  heavyHitStopDuration: 0.13

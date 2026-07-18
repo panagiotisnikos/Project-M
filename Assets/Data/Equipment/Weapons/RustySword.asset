@@ -1,0 +1,43 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9f9e5054bcd9f244a9cbca3ebe173672, type: 3}
+  m_Name: RustySword
+  m_EditorClassIdentifier: Assembly-CSharp::WeaponData
+  weaponName: Rusty Sword
+  description: 
+  baseDamage: 10
+  lightAttackRange: 1.8
+  lightAttackRadius: 0.7
+  lightMovementMultiplier: 0.35
+  firstForwardStep: 0.22
+  secondForwardStep: 0.28
+  thirdForwardStep: 0.38
+  firstWindupDuration: 0.15
+  firstRecoveryDuration: 0.25
+  firstDamageMultiplier: 1
+  secondWindupDuration: 0.12
+  secondRecoveryDuration: 0.25
+  secondDamageMultiplier: 1
+  thirdWindupDuration: 0.18
+  thirdRecoveryDuration: 0.45
+  thirdDamageMultiplier: 1.25
+  heavyDamageMultiplier: 2
+  heavyRange: 2.1
+  heavyRadius: 0.85
+  heavyWindupDuration: 0.55
+  heavyRecoveryDuration: 0.75
+  heavyKnockbackMultiplier: 1.8
+  heavyHitReactionDuration: 0.35
+  heavyMovementMultiplier: 0.1
+  heavyForwardStep: 0.65
+  lightHitStopDuration: 0.06
+  heavyHitStopDuration: 0.09

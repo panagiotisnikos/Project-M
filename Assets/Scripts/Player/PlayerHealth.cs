@@ -5,20 +5,14 @@ public class PlayerHealth : MonoBehaviour
     [Header("Health")]
     [SerializeField] private int maxHealth = 100;
 
-    [Header("Blocking")]
-    [SerializeField] private float blockAngle = 120f;
-    [SerializeField] private float blockedDamageMultiplier = 0f;
-
-    [Header("Parry")]
-    [SerializeField] private float parryStaggerDuration = 1.25f;
-
-    [Header("Knockback")]
+    [Header("Base Knockback")]
     [SerializeField] private float knockbackForce = 4f;
-    [SerializeField] private float blockedKnockbackMultiplier = 0.2f;
 
     [Header("References")]
     [SerializeField] private PlayerPerformanceTracker performanceTracker;
     [SerializeField] private PlayerMovement playerMovement;
+    [SerializeField] private PlayerEquipment playerEquipment;
+    [SerializeField] private PlayerStamina playerStamina;
 
     private int currentHealth;
     private bool isDead;
@@ -35,7 +29,26 @@ public class PlayerHealth : MonoBehaviour
 
         if (playerMovement == null)
         {
-            playerMovement = GetComponent<PlayerMovement>();
+            playerMovement =
+                GetComponent<PlayerMovement>();
+        }
+
+        if (playerEquipment == null)
+        {
+            playerEquipment =
+                GetComponent<PlayerEquipment>();
+        }
+        if (playerStamina == null)
+        {
+            playerStamina =
+                GetComponent<PlayerStamina>();
+        }
+
+        if (playerStamina == null)
+        {
+            Debug.LogWarning(
+                "[PlayerHealth] PlayerStamina component is missing."
+            );
         }
 
         currentHealth = maxHealth;
@@ -53,94 +66,172 @@ public class PlayerHealth : MonoBehaviour
     }
 
     public void TakeDamage(
-        int damage,
-        Vector3 hitDirection,
-        EnemyAI attacker)
+    int damage,
+    Vector3 hitDirection,
+    EnemyAI attacker)
+{
+    if (isDead)
+        return;
+
+    if (playerMovement != null &&
+        playerMovement.IsInvulnerable)
     {
-        if (isDead)
-            return;
-
-        bool attackIsFrontal =
-            IsAttackInsideBlockAngle(hitDirection);
-
-        if (attackIsFrontal &&
-            playerMovement != null &&
-            playerMovement.TryConsumeParry())
-        {
-            HandleParry(attacker);
-            return;
-        }
-
-        bool blocked =
-            attackIsFrontal &&
-            playerMovement != null &&
-            playerMovement.IsBlocking;
-
-        int finalDamage = damage;
-        float finalKnockbackForce = knockbackForce;
-
-        if (blocked)
-        {
-            finalDamage = Mathf.RoundToInt(
-                damage * blockedDamageMultiplier
-            );
-
-            finalKnockbackForce *=
-                blockedKnockbackMultiplier;
-
-            Debug.Log(
-                $"[PlayerHealth] BLOCK! " +
-                $"Damage reduced from {damage} " +
-                $"to {finalDamage}."
-            );
-        }
-
-        currentHealth -= finalDamage;
-        currentHealth = Mathf.Max(currentHealth, 0);
-
-        ApplyKnockback(
-            hitDirection,
-            finalKnockbackForce
+        Debug.Log(
+            "[PlayerHealth] Attack avoided " +
+            "with dodge i-frames."
         );
 
-        if (performanceTracker != null &&
-            finalDamage > 0)
+        return;
+    }
+
+    ShieldData shield =
+        GetEquippedShield();
+
+    bool isBlocking =
+        playerMovement != null &&
+        playerMovement.IsBlocking;
+
+    bool attackIsFrontal =
+        isBlocking &&
+        shield != null &&
+        IsAttackInsideBlockAngle(
+            hitDirection,
+            shield.BlockAngle
+        );
+
+    /*
+     * Parry is checked before regular block.
+     *
+     * A correctly timed parry still requires
+     * its small stamina cost.
+     */
+    if (attackIsFrontal &&
+        playerMovement.TryConsumeParry())
+    {
+        if (TrySpendStamina(
+                shield.ParryStaminaCost))
         {
-            performanceTracker.RegisterDamageTaken(
-                finalDamage
+            HandleParry(
+                attacker,
+                shield.ParryStaggerDuration
             );
+
+            return;
         }
 
         Debug.Log(
-            $"[PlayerHealth] Health: " +
-            $"{currentHealth}/{maxHealth}"
+            "[PlayerHealth] Parry timing succeeded, " +
+            "but there was not enough stamina."
         );
+    }
 
-        if (currentHealth <= 0)
+    int finalDamage = damage;
+
+    float finalKnockbackForce =
+        knockbackForce;
+
+    if (attackIsFrontal)
+    {
+        float blockStaminaCost =
+            damage *
+            shield.BlockStaminaMultiplier;
+
+        if (TrySpendStamina(
+                blockStaminaCost))
         {
-            Die();
+            finalDamage =
+                Mathf.RoundToInt(
+                    damage *
+                    shield.BlockedDamageMultiplier
+                );
+
+            finalKnockbackForce *=
+                shield.BlockedKnockbackMultiplier;
+
+            Debug.Log(
+                $"[PlayerHealth] BLOCK with " +
+                $"{shield.ShieldName}! " +
+                $"Damage reduced from {damage} " +
+                $"to {finalDamage}. " +
+                $"Stamina cost: " +
+                $"{blockStaminaCost:0.0}."
+            );
+        }
+        else
+        {
+            /*
+             * No guard-break state yet.
+             * The attack simply passes through the guard.
+             */
+            Debug.Log(
+                $"[PlayerHealth] BLOCK FAILED! " +
+                $"Not enough stamina. Required: " +
+                $"{blockStaminaCost:0.0}."
+            );
         }
     }
 
-    private void HandleParry(EnemyAI attacker)
+    currentHealth -= finalDamage;
+
+    currentHealth =
+        Mathf.Max(
+            currentHealth,
+            0
+        );
+
+    ApplyKnockback(
+        hitDirection,
+        finalKnockbackForce
+    );
+
+    if (performanceTracker != null &&
+        finalDamage > 0)
     {
-        Debug.Log("[PlayerHealth] PARRY!");
+        performanceTracker
+            .RegisterDamageTaken(
+                finalDamage
+            );
+    }
+
+    Debug.Log(
+        $"[PlayerHealth] Health: " +
+        $"{currentHealth}/{maxHealth}"
+    );
+
+    if (currentHealth <= 0)
+    {
+        Die();
+    }
+}
+
+    private void HandleParry(
+        EnemyAI attacker,
+        float staggerDuration)
+    {
+        Debug.Log(
+            "[PlayerHealth] PARRY!"
+        );
 
         if (attacker != null)
         {
-            attacker.Stagger(parryStaggerDuration);
+            attacker.Stagger(
+                staggerDuration
+            );
         }
     }
 
-    private bool IsAttackInsideBlockAngle(
-        Vector3 hitDirection)
+    private ShieldData GetEquippedShield()
     {
-        if (playerMovement == null ||
-            !playerMovement.IsBlocking)
-        {
-            return false;
-        }
+        if (playerEquipment == null)
+            return null;
 
+        return playerEquipment.EquippedShield;
+    }
+
+    private bool IsAttackInsideBlockAngle(
+        Vector3 hitDirection,
+        float blockAngle)
+    {
         /*
          * hitDirection points from the attacker
          * toward the player.
@@ -153,8 +244,11 @@ public class PlayerHealth : MonoBehaviour
 
         directionToAttacker.y = 0f;
 
-        if (directionToAttacker.sqrMagnitude < 0.01f)
+        if (directionToAttacker.sqrMagnitude <
+            0.01f)
+        {
             return false;
+        }
 
         directionToAttacker.Normalize();
 
@@ -167,9 +261,28 @@ public class PlayerHealth : MonoBehaviour
         float halfBlockAngle =
             blockAngle * 0.5f;
 
-        return angleToAttacker <= halfBlockAngle;
+        return angleToAttacker <=
+               halfBlockAngle;
     }
+    private bool TrySpendStamina(
+        float amount)
+    {
+        if (amount <= 0f)
+            return true;
 
+        if (playerStamina == null)
+        {
+            /*
+            * Temporary fail-safe if the stamina
+            * component has not been assigned.
+            */
+            return true;
+        }
+
+        return playerStamina.TrySpend(
+            amount
+        );
+    }
     private void Die()
     {
         if (isDead)
@@ -177,7 +290,9 @@ public class PlayerHealth : MonoBehaviour
 
         isDead = true;
 
-        Debug.Log("[PlayerHealth] Player died.");
+        Debug.Log(
+            "[PlayerHealth] Player died."
+        );
 
         if (performanceTracker != null)
         {
@@ -189,10 +304,20 @@ public class PlayerHealth : MonoBehaviour
         Vector3 hitDirection,
         float force)
     {
-        if (rb == null || force <= 0f)
+        if (rb == null ||
+            force <= 0f)
+        {
             return;
+        }
 
         hitDirection.y = 0f;
+
+        if (hitDirection.sqrMagnitude <
+            0.01f)
+        {
+            return;
+        }
+
         hitDirection.Normalize();
 
         rb.AddForce(

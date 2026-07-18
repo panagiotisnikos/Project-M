@@ -153,8 +153,8 @@ public class EnemyHealth : MonoBehaviour
     }
 
     private void ApplyKnockback(
-        Vector3 hitDirection,
-        float forceMultiplier)
+    Vector3 hitDirection,
+    float forceMultiplier)
     {
         if (rb == null)
             return;
