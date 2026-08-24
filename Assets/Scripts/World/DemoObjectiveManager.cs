@@ -6,6 +6,8 @@ public class DemoObjectiveManager : MonoBehaviour
     [SerializeField] private PlayerPerformanceTracker performanceTracker;
     public string CurrentObjective { get; private set; } = "Clear the camp";
     private bool demoCompleted;
+    public bool IsDemoCompleted =>
+    demoCompleted;
     public string StatusMessage { get; private set; } = "";
 
     public void TryCompleteDemo()
