@@ -94,7 +94,16 @@ public class PlayerMovement : MonoBehaviour
 
     private void Update()
     {
+        if (GameUIController.IsPaused)
+        {
+            movementDirection =
+                Vector3.zero;
+
+            return;
+        }
+
         ReadMovementInput();
+
 
         if (IsDodging)
         {

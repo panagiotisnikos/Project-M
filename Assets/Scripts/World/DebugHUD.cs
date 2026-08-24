@@ -2,6 +2,9 @@ using UnityEngine;
 
 public class DebugHUD : MonoBehaviour
 {
+    [Header("Debug Display")]
+    [SerializeField] private bool showDebugHUD = false;
+    [SerializeField] private KeyCode toggleKey = KeyCode.F3;
     [Header("Player Combat")]
     [SerializeField] private PlayerHealth playerHealth;
     [SerializeField] private PlayerStamina playerStamina;
@@ -21,9 +24,34 @@ public class DebugHUD : MonoBehaviour
     {
         FindMissingPlayerReferences();
     }
+    private void Update()
+    {
+        if (Input.GetKeyDown(toggleKey))
+        {
+            showDebugHUD = !showDebugHUD;
 
+            Debug.Log(
+                $"[DebugHUD] Developer debug " +
+                $"{(showDebugHUD ? "enabled" : "disabled")}."
+            );
+        }
+    }    
+    
     private void OnGUI()
     {
+        if (!showDebugHUD)
+            return;
+
+        GUI.Label(
+            new Rect(
+                Screen.width - 190,
+                10,
+                180,
+                25
+            ),
+            "DEVELOPER DEBUG [F3]"
+        );
+
         DrawCombatPanel();
         DrawAdaptivePanel();
         DrawAdaptiveDecisionPanel();

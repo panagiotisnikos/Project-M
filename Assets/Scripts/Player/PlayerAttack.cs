@@ -111,10 +111,12 @@ public class PlayerAttack : MonoBehaviour
 
     private void Update()
     {
+        if (GameUIController.IsPaused)
+            return;
+
         ReadAttackInput();
         UpdateAttackState();
     }
-
     private void ReadAttackInput()
 {
     bool lightAttackPressed =
@@ -791,7 +793,10 @@ public class PlayerAttack : MonoBehaviour
 
     private void RestoreTimeScale()
     {
-        Time.timeScale = 1f;
+        Time.timeScale =
+            GameUIController.IsPaused
+                ? 0f
+                : 1f;
 
         Time.fixedDeltaTime =
             normalFixedDeltaTime;
