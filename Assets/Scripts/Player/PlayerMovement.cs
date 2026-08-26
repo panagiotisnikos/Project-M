@@ -29,6 +29,10 @@ public class PlayerMovement : MonoBehaviour
     private Rigidbody rb;
 
     private Vector3 movementDirection;
+    private Vector2 movementInput;
+
+    public float MoveX => movementInput.x;
+    public float MoveZ => movementInput.y;
     private Vector3 dodgeDirection;
 
     private float parryWindowEndTime;
@@ -42,6 +46,8 @@ public class PlayerMovement : MonoBehaviour
 
     public bool IsBlocking { get; private set; }
     public bool IsDodging { get; private set; }
+    public bool IsMoving =>
+    movementDirection.sqrMagnitude > 0.01f;
 
     public bool IsParryWindowOpen =>
         IsBlocking &&
@@ -154,6 +160,12 @@ public class PlayerMovement : MonoBehaviour
 
         float vertical =
             Input.GetAxisRaw("Vertical");
+
+        movementInput =
+            new Vector2(
+                horizontal,
+                vertical
+            );
 
         Vector3 input =
             new Vector3(
@@ -483,5 +495,36 @@ public class PlayerMovement : MonoBehaviour
         rb.MoveRotation(
             smoothRotation
         );
+    }
+    public bool IsMovingForward
+    {
+        get
+        {
+            if (!IsMoving)
+                return false;
+
+            Vector3 localDirection =
+                transform.InverseTransformDirection(
+                    movementDirection.normalized
+                );
+
+            return localDirection.z > 0.2f;
+        }
+    }
+
+    public bool IsMovingBackward
+    {
+        get
+        {
+            if (!IsMoving)
+                return false;
+
+            Vector3 localDirection =
+                transform.InverseTransformDirection(
+                    movementDirection.normalized
+                );
+
+            return localDirection.z < -0.2f;
+        }
     }
 }
