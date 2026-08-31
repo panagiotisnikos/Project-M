@@ -115,7 +115,6 @@ public class PlayerAttack : MonoBehaviour
             return;
 
         ReadAttackInput();
-        UpdateAttackState();
     }
     private void ReadAttackInput()
 {
@@ -283,25 +282,25 @@ public class PlayerAttack : MonoBehaviour
         currentState =
             AttackState.Windup;
 
-        float windupDuration =
-            GetCurrentWindupDuration();
+        if (playerMovement != null)
+        {
+            playerMovement.QueueAttackStep(
+                GetCurrentForwardStep()
+            );
+        }
 
-        stateEndTime =
-            Time.time + windupDuration;
-
-        if (currentAttackType == AttackType.Heavy)
+        if (currentAttackType ==
+            AttackType.Heavy)
         {
             Debug.Log(
-                $"[PlayerAttack] Heavy windup. " +
-                $"Hit in {windupDuration:0.00}s."
+                "[PlayerAttack] Heavy attack animation started."
             );
         }
         else
         {
             Debug.Log(
                 $"[PlayerAttack] Light attack " +
-                $"{currentComboStep} started. " +
-                $"Hit in {windupDuration:0.00}s."
+                $"{currentComboStep} animation started."
             );
         }
     }
@@ -315,13 +314,6 @@ public class PlayerAttack : MonoBehaviour
          * Forward commitment occurs whether the
          * attack hits or misses.
          */
-        if (playerMovement != null)
-        {
-            playerMovement.QueueAttackStep(
-                GetCurrentForwardStep()
-            );
-        }
-
         bool hitEnemy = false;
 
         int currentDamage =
@@ -425,28 +417,13 @@ public class PlayerAttack : MonoBehaviour
         currentState =
             AttackState.Recovery;
 
-        float recoveryDuration =
-            GetCurrentRecoveryDuration();
-
-        stateEndTime =
-            Time.time + recoveryDuration;
-
-        if (currentAttackType ==
-            AttackType.Heavy)
-        {
-            Debug.Log(
-                $"[PlayerAttack] Heavy recovery. " +
-                $"Duration: {recoveryDuration:0.00}s."
-            );
-        }
-        else
-        {
-            Debug.Log(
-                $"[PlayerAttack] Light attack " +
-                $"{currentComboStep} recovery. " +
-                $"Duration: {recoveryDuration:0.00}s."
-            );
-        }
+        Debug.Log(
+            currentAttackType ==
+            AttackType.Heavy
+                ? "[PlayerAttack] Heavy attack recovery."
+                : $"[PlayerAttack] Light attack " +
+                $"{currentComboStep} recovery."
+        );
     }
 
     private void ResolveRecoveryEnd()
@@ -857,6 +834,74 @@ public class PlayerAttack : MonoBehaviour
         Gizmos.DrawWireSphere(
             heavyAttackCenter,
             weapon.HeavyRadius
+        );
+    }
+    public void AnimationAttackHit()
+    {
+        if (currentState != AttackState.Windup)
+            return;
+
+        if (activeWeapon == null)
+            return;
+
+        PerformAttackHit();
+        BeginAttackRecovery();
+    }
+
+    public void AnimationAttackFinished(
+        int expectedComboStep)
+    {
+        if (currentState == AttackState.Idle)
+            return;
+
+        if (currentAttackType == AttackType.Light &&
+            currentComboStep != expectedComboStep)
+        {
+            return;
+        }
+
+        FinishAttackSequence();
+    }
+    public void AnimationComboChain(int expectedComboStep)
+    {
+        if (currentAttackType != AttackType.Light)
+            return;
+
+        if (currentComboStep != expectedComboStep)
+            return;
+
+        if (!nextAttackQueued)
+            return;
+
+        if (currentComboStep >= MaxComboSteps)
+            return;
+
+        int nextComboStep =
+            currentComboStep + 1;
+
+        float staminaCost =
+            GetLightStaminaCost(
+                nextComboStep
+            );
+
+        if (!TrySpendStamina(
+                staminaCost,
+                $"light attack {nextComboStep}"))
+        {
+            nextAttackQueued = false;
+            return;
+        }
+
+        currentComboStep =
+            nextComboStep;
+
+        nextAttackQueued = false;
+
+        BeginAttackWindup();
+
+        Debug.Log(
+            $"[PlayerAttack] Chained into light attack " +
+            $"{currentComboStep}."
         );
     }
 }

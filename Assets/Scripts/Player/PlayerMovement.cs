@@ -42,7 +42,11 @@ public class PlayerMovement : MonoBehaviour
     private float dodgeEndTime;
     private float nextDodgeAllowedTime;
 
-    private float pendingAttackStepDistance;
+    [Header("Attack Movement")]
+    [SerializeField] private float attackStepDuration = 0.22f;
+
+    private float remainingAttackStepDistance;
+    private float attackStepSpeed;
 
     public bool IsBlocking { get; private set; }
     public bool IsDodging { get; private set; }
@@ -279,7 +283,8 @@ public class PlayerMovement : MonoBehaviour
         IsDodging = true;
         IsBlocking = false;
 
-        pendingAttackStepDistance = 0f;
+        remainingAttackStepDistance = 0f;
+        attackStepSpeed = 0f;
 
         ResetParryWindow();
 
@@ -354,17 +359,17 @@ public class PlayerMovement : MonoBehaviour
         return true;
     }
 
-    public void QueueAttackStep(
-        float distance)
+    public void QueueAttackStep(float distance)
     {
         if (distance <= 0f)
             return;
 
-        pendingAttackStepDistance =
-            Mathf.Max(
-                pendingAttackStepDistance,
-                distance
-            );
+        remainingAttackStepDistance = distance;
+
+        attackStepSpeed =
+            attackStepDuration > 0f
+                ? distance / attackStepDuration
+                : distance;
     }
 
     private ShieldData GetEquippedShield()
@@ -416,25 +421,32 @@ public class PlayerMovement : MonoBehaviour
                 Time.fixedDeltaTime;
         }
 
-        if (pendingAttackStepDistance > 0f)
+    if (remainingAttackStepDistance > 0f)
+    {
+        Vector3 stepDirection =
+            transform.forward;
+
+        stepDirection.y = 0f;
+
+        if (stepDirection.sqrMagnitude > 0.01f)
         {
-            Vector3 stepDirection =
-                transform.forward;
+            stepDirection.Normalize();
 
-            stepDirection.y = 0f;
+            float stepThisFrame =
+                Mathf.Min(
+                    remainingAttackStepDistance,
+                    attackStepSpeed *
+                    Time.fixedDeltaTime
+                );
 
-            if (stepDirection.sqrMagnitude >
-                0.01f)
-            {
-                stepDirection.Normalize();
+            totalDisplacement +=
+                stepDirection *
+                stepThisFrame;
 
-                totalDisplacement +=
-                    stepDirection *
-                    pendingAttackStepDistance;
-            }
-
-            pendingAttackStepDistance = 0f;
+            remainingAttackStepDistance -=
+                stepThisFrame;
         }
+    }
 
         if (totalDisplacement.sqrMagnitude <
             0.0001f)

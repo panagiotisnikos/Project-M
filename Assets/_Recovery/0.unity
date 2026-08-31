@@ -1620,11 +1620,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 332413360}
   m_CullTransparentMesh: 1
---- !u!1 &351132610 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 6655624246481427919, guid: 73fc3488243010c48843c198972d1180, type: 3}
-  m_PrefabInstance: {fileID: 1320447938}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1 &352469170
 GameObject:
   m_ObjectHideFlags: 0
@@ -6560,10 +6555,7 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents:
-    - targetCorrespondingSourceObject: {fileID: 6655624246481427919, guid: 73fc3488243010c48843c198972d1180, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 1320447941}
+    m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 73fc3488243010c48843c198972d1180, type: 3}
 --- !u!4 &1320447939 stripped
 Transform:
@@ -6575,21 +6567,6 @@ Animator:
   m_CorrespondingSourceObject: {fileID: 141435150592187663, guid: 73fc3488243010c48843c198972d1180, type: 3}
   m_PrefabInstance: {fileID: 1320447938}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &1320447941
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 351132610}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: dd576676abcbb0a44bcd25251f62ac32, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PlayerAnimationController
-  animator: {fileID: 1320447940}
-  playerMovement: {fileID: 1407352001}
-  playerAttack: {fileID: 1407352008}
 --- !u!1 &1338411252
 GameObject:
   m_ObjectHideFlags: 0
@@ -6857,6 +6834,7 @@ GameObject:
   - component: {fileID: 1407352008}
   - component: {fileID: 1407352009}
   - component: {fileID: 1407352010}
+  - component: {fileID: 1407352011}
   m_Layer: 0
   m_Name: Player
   m_TagString: Player
@@ -7091,6 +7069,20 @@ MonoBehaviour:
   blockingRegenerationMultiplier: 0.25
   playerMovement: {fileID: 1407352001}
   currentStamina: 0
+--- !u!114 &1407352011
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1407352000}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dd576676abcbb0a44bcd25251f62ac32, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerAnimationController
+  animator: {fileID: 1320447940}
+  playerMovement: {fileID: 1407352001}
 --- !u!1 &1547865814
 GameObject:
   m_ObjectHideFlags: 0
