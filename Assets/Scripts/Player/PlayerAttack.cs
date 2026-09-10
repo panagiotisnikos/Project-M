@@ -22,6 +22,12 @@ public class PlayerAttack : MonoBehaviour
     [Range(0.01f, 0.5f)]
     [SerializeField] private float hitStopTimeScale = 0.05f;
 
+    [Header("Safety")]
+    [Tooltip("If a single attack state (windup or recovery) lasts longer than this in seconds, " +
+             "the swing is force-ended and a warning is logged. Watchdog against a missing or " +
+             "mis-authored animation event - it should never fire in normal play.")]
+    [SerializeField] private float attackStuckTimeout = 4f;
+
     [Header("References")]
     [SerializeField] private LayerMask enemyLayer;
     [SerializeField] private PlayerMovement playerMovement;
@@ -45,7 +51,7 @@ public class PlayerAttack : MonoBehaviour
     private int currentComboStep;
     private bool nextAttackQueued;
 
-    private float stateEndTime;
+    private float stateEnteredTime;
 
     private Coroutine hitStopCoroutine;
     private float normalFixedDeltaTime;
@@ -114,6 +120,7 @@ public class PlayerAttack : MonoBehaviour
         if (GameUIController.IsPaused)
             return;
 
+        TickStuckAttackWatchdog();
         ReadAttackInput();
     }
     private void ReadAttackInput()
@@ -189,32 +196,28 @@ public class PlayerAttack : MonoBehaviour
     }
 }
 
-    private void UpdateAttackState()
+    /*
+     * Safety net only. The attack lifecycle is driven by animation events
+     * (AnimationAttackHit / AnimationComboChain / AnimationAttackFinished).
+     * If one of those never arrives - a missing or mis-authored event - the
+     * player would otherwise be locked in an attack forever. This forces the
+     * swing to end after attackStuckTimeout and logs where it happened.
+     */
+    private void TickStuckAttackWatchdog()
     {
-        switch (currentState)
-        {
-            case AttackState.Idle:
-                break;
+        if (currentState == AttackState.Idle)
+            return;
 
-            case AttackState.Windup:
+        if (Time.time - stateEnteredTime <= attackStuckTimeout)
+            return;
 
-                if (Time.time >= stateEndTime)
-                {
-                    PerformAttackHit();
-                    BeginAttackRecovery();
-                }
+        Debug.LogWarning(
+            $"[PlayerAttack] {currentState} exceeded " +
+            $"{attackStuckTimeout:0.0}s (missing animation event?). " +
+            $"Force-ending the attack."
+        );
 
-                break;
-
-            case AttackState.Recovery:
-
-                if (Time.time >= stateEndTime)
-                {
-                    ResolveRecoveryEnd();
-                }
-
-                break;
-        }
+        FinishAttackSequence();
     }
 
     private void StartLightCombo(
@@ -281,6 +284,8 @@ public class PlayerAttack : MonoBehaviour
 
         currentState =
             AttackState.Windup;
+
+        stateEnteredTime = Time.time;
 
         if (playerMovement != null)
         {
@@ -417,6 +422,8 @@ public class PlayerAttack : MonoBehaviour
         currentState =
             AttackState.Recovery;
 
+        stateEnteredTime = Time.time;
+
         Debug.Log(
             currentAttackType ==
             AttackType.Heavy
@@ -424,46 +431,6 @@ public class PlayerAttack : MonoBehaviour
                 : $"[PlayerAttack] Light attack " +
                 $"{currentComboStep} recovery."
         );
-    }
-
-    private void ResolveRecoveryEnd()
-    {
-        if (currentAttackType == AttackType.Light &&
-            nextAttackQueued &&
-            currentComboStep < MaxComboSteps)
-        {
-            int nextComboStep =
-                currentComboStep + 1;
-
-            float nextAttackStaminaCost =
-                GetLightStaminaCost(
-                    nextComboStep
-                );
-
-            if (!TrySpendStamina(
-                    nextAttackStaminaCost,
-                    $"light attack {nextComboStep}"))
-            {
-                Debug.Log(
-                    $"[PlayerAttack] Combo stopped after " +
-                    $"attack {currentComboStep}: " +
-                    $"not enough stamina."
-                );
-
-                FinishAttackSequence();
-                return;
-            }
-
-            currentComboStep =
-                nextComboStep;
-
-            nextAttackQueued = false;
-
-            BeginAttackWindup();
-            return;
-        }
-
-        FinishAttackSequence();
     }
 
     private void FinishAttackSequence()
@@ -508,7 +475,6 @@ public class PlayerAttack : MonoBehaviour
 
         currentComboStep = 0;
         nextAttackQueued = false;
-        stateEndTime = 0f;
     }
 
     private WeaponData GetEquippedWeapon()

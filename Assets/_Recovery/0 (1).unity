@@ -7442,6 +7442,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerAttack
   hitStopTimeScale: 0.05
+  attackStuckTimeout: 4
   enemyLayer:
     serializedVersion: 2
     m_Bits: 8
