@@ -26,7 +26,7 @@ public class BossController : MonoBehaviour
 
     private void Update()
     {
-        AdaptToWorldState();
+        RefreshAbilities();
 
         if (Input.GetKeyDown(KeyCode.B))
         {
@@ -34,43 +34,21 @@ public class BossController : MonoBehaviour
         }
     }
 
-    private void AdaptToWorldState()
+    /// <summary>
+    /// The boss starts with its full kit; the only thing that weakens it is
+    /// clearing camps (the "prepare, then fight" loop). Adaptation no longer
+    /// touches the boss - the world's response to the player is atmospheric.
+    /// </summary>
+    private void RefreshAbilities()
     {
-        if (worldAdaptationManager == null)
-            return;
+        canHeal = !campDisabledHealing;
+        canSummonMinions = !campDisabledSummons;
+        hasDecayAura = !campDisabledDecayAura;
 
-        bool adaptiveHeal = false;
-        bool adaptiveSummons = false;
-        bool adaptiveDecayAura = false;
-
-        switch (worldAdaptationManager.CurrentState)
-        {
-            case WorldAdaptationManager.WorldState.Stable:
-                CurrentProfile = "Passive";
-                adaptiveHeal = false;
-                adaptiveSummons = false;
-                adaptiveDecayAura = false;
-                break;
-
-
-            case WorldAdaptationManager.WorldState.Balanced:
-                CurrentProfile = "Balanced";
-                adaptiveHeal = false;
-                adaptiveSummons = true;
-                adaptiveDecayAura = false;
-                break;
-
-            case WorldAdaptationManager.WorldState.Decaying:
-                CurrentProfile = "Aggressive";
-                adaptiveHeal = true;
-                adaptiveSummons = true;
-                adaptiveDecayAura = true;
-                break;
-        }
-
-        canHeal = adaptiveHeal && !campDisabledHealing;
-        canSummonMinions = adaptiveSummons && !campDisabledSummons;
-        hasDecayAura = adaptiveDecayAura && !campDisabledDecayAura;
+        int weakened = (campDisabledHealing ? 1 : 0)
+                     + (campDisabledSummons ? 1 : 0)
+                     + (campDisabledDecayAura ? 1 : 0);
+        CurrentProfile = weakened == 0 ? "Full" : weakened >= 3 ? "Broken" : "Weakened";
     }
 
     public void DisableHealing()

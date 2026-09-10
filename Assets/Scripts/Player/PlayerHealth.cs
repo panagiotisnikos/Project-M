@@ -87,6 +87,11 @@ public class PlayerHealth : MonoBehaviour
             "with dodge i-frames."
         );
 
+        if (performanceTracker != null)
+        {
+            performanceTracker.RegisterCleanDodge();
+        }
+
         return;
     }
 
@@ -153,6 +158,11 @@ public class PlayerHealth : MonoBehaviour
 
             finalKnockbackForce *=
                 shield.BlockedKnockbackMultiplier;
+
+            if (performanceTracker != null)
+            {
+                performanceTracker.RegisterBlock();
+            }
 
             Debug.Log(
                 $"[PlayerHealth] BLOCK with " +
@@ -229,6 +239,11 @@ public class PlayerHealth : MonoBehaviour
         Debug.Log(
             "[PlayerHealth] PARRY!"
         );
+
+        if (performanceTracker != null)
+        {
+            performanceTracker.RegisterParry();
+        }
 
         attacker?.Stagger(
             staggerDuration

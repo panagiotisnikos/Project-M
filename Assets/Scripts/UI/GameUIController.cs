@@ -726,17 +726,14 @@ private void PopulateCompletionReport()
         completionStatsText != null)
     {
         completionStatsText.text =
-            $"Enemies Defeated        " +
+            $"Foes Laid Low            " +
             $"{performanceTracker.EnemiesKilled}\n" +
 
-            $"Damage Taken             " +
+            $"Wounds Suffered          " +
             $"{performanceTracker.DamageTaken}\n" +
 
-            $"Completion Time          " +
-            $"{FormatTime(performanceTracker.TimeAlive)}\n" +
-
-            $"Adaptive Score           " +
-            $"{performanceTracker.GetPerformanceScore():0.0}";
+            $"Time in the Valley       " +
+            $"{FormatTime(performanceTracker.TimeAlive)}";
     }
 
     if (worldAdaptationManager != null)
@@ -747,7 +744,7 @@ private void PopulateCompletionReport()
         if (worldStateText != null)
         {
             worldStateText.text =
-                state.ToString().ToUpper();
+                GetWorldResponseTitle(state);
         }
 
         if (worldDescriptionText != null)
@@ -783,6 +780,17 @@ private string FormatTime(float seconds)
     return
         $"{minutes:00}:{remainingSeconds:00}";
 }
+private string GetWorldResponseTitle(
+    WorldAdaptationManager.WorldState state)
+{
+    switch (state)
+    {
+        case WorldAdaptationManager.WorldState.Stable:   return "THE LAND LIES STILL";
+        case WorldAdaptationManager.WorldState.Decaying:  return "THE LAND HAS TURNED";
+        default:                                          return "THE LAND HOLDS";
+    }
+}
+
 private string GetWorldResponseDescription(
     WorldAdaptationManager.WorldState state)
 {
@@ -790,19 +798,19 @@ private string GetWorldResponseDescription(
     {
         case WorldAdaptationManager.WorldState.Stable:
             return
-                "The adaptive system shifted toward " +
-                "a more forgiving world response.";
+                "The valley draws breath. For now, the wilds keep their distance " +
+                "and the ground beneath you is quiet.";
 
         case WorldAdaptationManager.WorldState.Decaying:
             return
-                "The adaptive system shifted toward " +
-                "a more aggressive world response.";
+                "Something in the valley has woken to you. The earth remembers " +
+                "your tread, and where you walk, it festers.";
 
         case WorldAdaptationManager.WorldState.Balanced:
         default:
             return
-                "Your performance kept the adaptive " +
-                "world response in a balanced state.";
+                "The valley watches — neither kind nor cruel. It has taken your " +
+                "measure and made no promises.";
     }
 }
 }

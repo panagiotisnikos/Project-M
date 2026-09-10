@@ -11,9 +11,12 @@ public class WorldAdaptationManager : MonoBehaviour
 
     [SerializeField] private PlayerPerformanceTracker performanceTracker;
 
+    // Defensive-mastery signal (see PlayerPerformanceTracker):
+    //   below stableThreshold  -> the land stays dormant / forgiving
+    //   above decayingThreshold -> the land has "woken" to a skilled player and turns
     [Header("Adaptation Thresholds")]
-    [SerializeField] private float stableThreshold = -8f;
-    [SerializeField] private float decayingThreshold = 14f;
+    [SerializeField] private float stableThreshold = -5f;
+    [SerializeField] private float decayingThreshold = 20f;
 
     [Header("Debug")]
     [SerializeField] private bool showDebugLogs = true;

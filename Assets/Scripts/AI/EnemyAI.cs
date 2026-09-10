@@ -744,59 +744,12 @@ private float staggerEndTime;
         worldAdaptationManager = manager;
     }
 
-    public float GetMoveSpeedModifier()
-    {
-        if (worldAdaptationManager == null)
-            return 1f;
-
-        switch (worldAdaptationManager.CurrentState)
-        {
-            case WorldAdaptationManager.WorldState.Stable:
-                return 0.75f;
-
-            case WorldAdaptationManager.WorldState.Decaying:
-                return 1.35f;
-
-            default:
-                return 1f;
-        }
-    }
-
-    public float GetDetectionModifier()
-    {
-        if (worldAdaptationManager == null)
-            return 1f;
-
-        switch (worldAdaptationManager.CurrentState)
-        {
-            case WorldAdaptationManager.WorldState.Stable:
-                return 0.8f;
-
-            case WorldAdaptationManager.WorldState.Decaying:
-                return 1.3f;
-
-            default:
-                return 1f;
-        }
-    }
-
-    public float GetAttackCooldownModifier()
-    {
-        if (worldAdaptationManager == null)
-            return 1f;
-
-        switch (worldAdaptationManager.CurrentState)
-        {
-            case WorldAdaptationManager.WorldState.Stable:
-                return 1.4f;
-
-            case WorldAdaptationManager.WorldState.Decaying:
-                return 0.7f;
-
-            default:
-                return 1f;
-        }
-    }
+    // Adaptation no longer scales enemy combat stats - the world's response to
+    // the player is atmospheric / narrative (see WorldVisualAdapter), not a
+    // hidden difficulty dial. These are kept at 1 so the call sites are unchanged.
+    public float GetMoveSpeedModifier() => 1f;
+    public float GetDetectionModifier() => 1f;
+    public float GetAttackCooldownModifier() => 1f;
 
     private float GetAdaptedMoveSpeed()
     {
