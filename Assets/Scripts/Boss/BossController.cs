@@ -12,6 +12,14 @@ public class BossController : MonoBehaviour
 
     public string CurrentProfile { get; private set; } = "Unknown";
 
+    /*
+     * What the fight (BossCombat / BossDecayAura) is allowed to do right now.
+     * Each is the adaptive value AND-ed with "no camp has disabled it".
+     */
+    public bool CanHeal => canHeal;
+    public bool CanSummonMinions => canSummonMinions;
+    public bool HasDecayAura => hasDecayAura;
+
     private bool campDisabledHealing;
     private bool campDisabledSummons;
     private bool campDisabledDecayAura;

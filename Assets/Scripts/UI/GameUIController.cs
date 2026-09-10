@@ -22,6 +22,20 @@ public class GameUIController : MonoBehaviour
     [Header("Objective UI")]
     [SerializeField] private TMP_Text objectiveText;
 
+    [Header("Boss UI")]
+    [SerializeField] private GameObject bossBarRoot;
+    [SerializeField] private Image bossBarFill;
+    [SerializeField] private TMP_Text bossNameText;
+    [SerializeField] private string bossDisplayName = "THE BOSS";
+    [SerializeField] private BossHealth bossHealth;
+    [SerializeField] private BossCombat bossCombat;
+
+    [Header("Loadout Toast")]
+    [SerializeField] private CanvasGroup loadoutToast;
+    [SerializeField] private TMP_Text loadoutToastText;
+    [SerializeField] private float loadoutToastHoldDuration = 1.8f;
+    [SerializeField] private float loadoutToastFadeDuration = 0.35f;
+
     [Header("Loadout UI")]
     [SerializeField] private TMP_Text weaponText;
     [SerializeField] private TMP_Text shieldText;
@@ -52,11 +66,29 @@ private Coroutine completionRoutine;
     public static bool IsPaused { get; private set; }
 
     private Coroutine controlsRoutine;
-    private bool controlsVisible;   
+    private bool controlsVisible;
+
+    private Coroutine loadoutToastRoutine;
         private void Awake()
         {
             FindMissingReferences();
         }
+
+    private void OnEnable()
+    {
+        if (playerEquipment != null)
+        {
+            playerEquipment.OnLoadoutEquipped += HandleLoadoutEquipped;
+        }
+    }
+
+    private void OnDisable()
+    {
+        if (playerEquipment != null)
+        {
+            playerEquipment.OnLoadoutEquipped -= HandleLoadoutEquipped;
+        }
+    }
     [SerializeField]
     private PlayerPerformanceTracker performanceTracker;
 
@@ -84,6 +116,10 @@ private BossController bossController;
         if (completionPanel != null)
         {
             completionPanel.SetActive(false);
+        }
+        if (loadoutToast != null)
+        {
+            loadoutToast.alpha = 0f;
         }
         Cursor.lockState =
             CursorLockMode.Locked;
@@ -178,6 +214,18 @@ private BossController bossController;
             bossController =
                 FindFirstObjectByType<BossController>();
         }
+
+        if (bossHealth == null)
+        {
+            bossHealth =
+                FindFirstObjectByType<BossHealth>();
+        }
+
+        if (bossCombat == null)
+        {
+            bossCombat =
+                FindFirstObjectByType<BossCombat>();
+        }
     }
 
     private void RefreshUI()
@@ -186,6 +234,37 @@ private BossController bossController;
         RefreshStamina();
         RefreshObjective();
         RefreshLoadout();
+        RefreshBossBar();
+    }
+
+    private void RefreshBossBar()
+    {
+        if (bossBarRoot == null)
+            return;
+
+        bool show =
+            bossCombat != null &&
+            bossCombat.FightActive &&
+            bossHealth != null &&
+            !bossHealth.IsDead;
+
+        if (bossBarRoot.activeSelf != show)
+        {
+            bossBarRoot.SetActive(show);
+        }
+
+        if (!show)
+            return;
+
+        if (bossBarFill != null)
+        {
+            bossBarFill.fillAmount = bossHealth.Normalized;
+        }
+
+        if (bossNameText != null)
+        {
+            bossNameText.text = bossDisplayName;
+        }
     }
 
     private void RefreshHealth()
@@ -305,6 +384,51 @@ private IEnumerator ShowControlsRoutine()
     controlsOverlay.blocksRaycasts = false;
 
     controlsRoutine = null;
+}
+
+private void HandleLoadoutEquipped(string loadoutLabel)
+{
+    if (loadoutToast == null)
+        return;
+
+    if (loadoutToastText != null)
+    {
+        loadoutToastText.text = loadoutLabel;
+    }
+
+    if (loadoutToastRoutine != null)
+    {
+        StopCoroutine(loadoutToastRoutine);
+    }
+
+    loadoutToastRoutine =
+        StartCoroutine(ShowLoadoutToastRoutine());
+}
+
+private IEnumerator ShowLoadoutToastRoutine()
+{
+    loadoutToast.alpha = 1f;
+
+    yield return new WaitForSecondsRealtime(
+        loadoutToastHoldDuration
+    );
+
+    float elapsed = 0f;
+
+    while (elapsed < loadoutToastFadeDuration)
+    {
+        elapsed += Time.unscaledDeltaTime;
+
+        loadoutToast.alpha =
+            loadoutToastFadeDuration > 0f
+                ? Mathf.Lerp(1f, 0f, elapsed / loadoutToastFadeDuration)
+                : 0f;
+
+        yield return null;
+    }
+
+    loadoutToast.alpha = 0f;
+    loadoutToastRoutine = null;
 }
 
 private void ToggleControlsOverlay()

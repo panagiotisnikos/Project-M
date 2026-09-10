@@ -30,6 +30,9 @@ public class PlayerAnimationController : MonoBehaviour
 
     private static readonly int ComboStepHash =
         Animator.StringToHash("ComboStep");
+
+    private static readonly int AttackSpeedHash =
+        Animator.StringToHash("AttackSpeed");
     private void Awake()
     {
         if (animator == null)
@@ -102,6 +105,11 @@ public class PlayerAnimationController : MonoBehaviour
         animator.SetInteger(
             ComboStepHash,
             playerAttack.CurrentComboStep
+        );
+
+        animator.SetFloat(
+            AttackSpeedHash,
+            playerAttack.CurrentAttackSpeed
         );
     }
     public void AnimationAttackHit()

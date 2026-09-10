@@ -20,6 +20,7 @@ MonoBehaviour:
   baseDamage: 16
   lightAttackRange: 1.7
   lightAttackRadius: 0.8
+  attackSpeedMultiplier: 1
   lightMovementMultiplier: 0.22
   firstForwardStep: 0.28
   secondForwardStep: 0.34

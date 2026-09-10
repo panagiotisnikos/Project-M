@@ -1,7 +1,7 @@
 using UnityEngine;
 using System.Collections;
 
-public class EnemyHealth : MonoBehaviour
+public class EnemyHealth : MonoBehaviour, IDamageable
 {
     [Header("Health")]
     [SerializeField] private int maxHealth = 30;
@@ -12,6 +12,11 @@ public class EnemyHealth : MonoBehaviour
     [SerializeField] private float hitFlashDuration = 0.12f;
     [SerializeField] private Color hitFlashColor = Color.red;
     [SerializeField] private float knockbackForce = 4f;
+
+    [Header("VFX")]
+    [SerializeField] private ParticleSystem hitVfx;
+    [SerializeField] private ParticleSystem deathVfx;
+    [SerializeField] private float deathLinger = 0.4f;
 
     [Header("References")]
     [SerializeField] private PlayerPerformanceTracker performanceTracker;
@@ -84,10 +89,18 @@ public class EnemyHealth : MonoBehaviour
         if (currentHealth > 0 &&
             enemyAI != null)
         {
+            // spin to face the attacker if we were unaware, then react
+            enemyAI.NotifyDamaged(-hitDirection);
             enemyAI.HitReact(
                 reactionDuration
             );
         }
+
+        CombatVfx.Play(
+            hitVfx,
+            transform.position + Vector3.up * 0.9f,
+            -hitDirection
+        );
 
         StartHitFlash();
 
@@ -156,9 +169,6 @@ public class EnemyHealth : MonoBehaviour
     Vector3 hitDirection,
     float forceMultiplier)
     {
-        if (rb == null)
-            return;
-
         hitDirection.y = 0f;
 
         if (hitDirection.sqrMagnitude < 0.01f)
@@ -166,15 +176,24 @@ public class EnemyHealth : MonoBehaviour
 
         hitDirection.Normalize();
 
-        float finalKnockbackForce =
+        float knockback =
             knockbackForce *
             Mathf.Max(0f, forceMultiplier);
 
-        rb.AddForce(
-            hitDirection * finalKnockbackForce,
-            ForceMode.Impulse
-        );
+        // Movement is NavMesh-driven now, so a knockback is a short shove
+        // along the navmesh rather than a physics impulse.
+        if (enemyAI != null)
+        {
+            enemyAI.Nudge(hitDirection, knockback * 0.06f);
+        }
+        else if (rb != null && !rb.isKinematic)
+        {
+            rb.AddForce(hitDirection * knockback, ForceMode.Impulse);
+        }
     }
+
+    /// <summary>Fired once when the enemy dies, so the animator can play its death clip.</summary>
+    public event System.Action Died;
 
     private void Die()
     {
@@ -190,6 +209,33 @@ public class EnemyHealth : MonoBehaviour
             performanceTracker.RegisterEnemyKilled();
         }
 
-        Destroy(gameObject);
+        CombatVfx.Play(
+            deathVfx,
+            transform.position + Vector3.up * 0.9f
+        );
+
+        Died?.Invoke();
+
+        /*
+         * Stop acting and stop blocking the player immediately, but keep the
+         * mesh visible so the death animation can play out before Destroy.
+         */
+        if (enemyAI != null)
+        {
+            enemyAI.enabled = false;
+        }
+
+        if (rb != null)
+        {
+            rb.linearVelocity = Vector3.zero;
+            rb.isKinematic = true;
+        }
+
+        foreach (Collider col in GetComponentsInChildren<Collider>())
+        {
+            col.enabled = false;
+        }
+
+        Destroy(gameObject, Mathf.Max(0f, deathLinger));
     }
 }

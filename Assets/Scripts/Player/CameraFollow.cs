@@ -17,6 +17,28 @@ public class CameraFollow : MonoBehaviour
     [SerializeField] private float minDistance = 4f;
     [SerializeField] private float maxDistance = 14f;
 
+    [Header("Smoothing")]
+    [Tooltip("How quickly the camera catches up to the player. Lower = smoother/laggier.")]
+    [SerializeField] private float followSmoothTime = 0.12f;
+    [Tooltip("How quickly the camera catches up to mouse-look rotation.")]
+    [SerializeField] private float rotationLerpSpeed = 18f;
+
+    [Header("References")]
+    [SerializeField] private CameraShake cameraShake;
+
+    private Vector3 smoothedFocus;
+    private Quaternion smoothedRotation = Quaternion.identity;
+    private Vector3 focusVelocity;
+    private bool initialised;
+
+    private void Awake()
+    {
+        if (cameraShake == null)
+        {
+            cameraShake = GetComponent<CameraShake>();
+        }
+    }
+
     private void LateUpdate()
     {
         if (GameUIController.IsPaused)
@@ -32,20 +54,35 @@ public class CameraFollow : MonoBehaviour
         distance -= Input.GetAxis("Mouse ScrollWheel") * 4f;
         distance = Mathf.Clamp(distance, minDistance, maxDistance);
 
-        Quaternion rotation =
-            Quaternion.Euler(pitch, yaw, 0f);
+        Quaternion targetRotation = Quaternion.Euler(pitch, yaw, 0f);
+        Vector3 focusPoint = target.position + Vector3.up * targetHeight;
 
-        Vector3 focusPoint =
-            target.position +
-            Vector3.up * targetHeight;
+        if (!initialised)
+        {
+            smoothedFocus = focusPoint;
+            smoothedRotation = targetRotation;
+            initialised = true;
+        }
 
-        transform.position =
-            focusPoint -
-            rotation *
-            Vector3.forward *
-            distance;
+        float dt = Time.unscaledDeltaTime;
 
-        transform.LookAt(focusPoint);
+        smoothedFocus = Vector3.SmoothDamp(
+            smoothedFocus, focusPoint, ref focusVelocity, followSmoothTime, Mathf.Infinity, dt);
+
+        smoothedRotation = Quaternion.Slerp(
+            smoothedRotation, targetRotation, 1f - Mathf.Exp(-rotationLerpSpeed * dt));
+
+        transform.position = smoothedFocus - smoothedRotation * Vector3.forward * distance;
+        transform.rotation = smoothedRotation;
+
+        if (cameraShake != null)
+        {
+            transform.position +=
+                transform.TransformVector(cameraShake.CurrentPositionOffset);
+
+            transform.rotation *=
+                Quaternion.Euler(cameraShake.CurrentRotationOffset);
+        }
     }
 
     public Vector3 GetCameraForward()

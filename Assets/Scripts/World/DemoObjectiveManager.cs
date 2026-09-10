@@ -3,25 +3,21 @@ using UnityEngine;
 public class DemoObjectiveManager : MonoBehaviour
 {
     [SerializeField] private Camp requiredCamp;
+    [SerializeField] private BossCombat bossCombat;
     [SerializeField] private PlayerPerformanceTracker performanceTracker;
+
     public string CurrentObjective { get; private set; } = "Clear the camp";
+
     private bool demoCompleted;
-    public bool IsDemoCompleted =>
-    demoCompleted;
+    public bool IsDemoCompleted => demoCompleted;
+
     public string StatusMessage { get; private set; } = "";
 
-    public void TryCompleteDemo()
+    /// <summary>Called by BossHealth when the boss is defeated. Ends the slice.</summary>
+    public void RegisterBossDefeated()
     {
         if (demoCompleted)
             return;
-
-        if (requiredCamp != null && !requiredCamp.IsCleared)
-        {
-            Debug.Log("[DemoObjective] Boss arena reached, but required camp is not cleared yet.");
-            CurrentObjective = "Clear the camp";
-            StatusMessage = "Boss arena locked. Clear the camp first.";
-            return;
-        }
 
         demoCompleted = true;
 
@@ -30,24 +26,30 @@ public class DemoObjectiveManager : MonoBehaviour
             performanceTracker.StopTracking();
         }
 
-        Debug.Log("[DemoObjective] Demo completed. Camp cleared and adaptive boss state demonstrated.");
-        CurrentObjective = "Demo complete";
-        StatusMessage = "Demo completed successfully.";
+        Debug.Log("[DemoObjective] Boss defeated. Vertical slice complete.");
+        CurrentObjective = "Boss defeated";
+        StatusMessage = "The boss is dead. Slice complete.";
     }
+
     private void Update()
     {
-    if (demoCompleted)
-        return;
+        if (demoCompleted)
+            return;
 
-    if (requiredCamp != null && requiredCamp.IsCleared)
-    {
-        CurrentObjective = "Enter boss arena";
+        if (bossCombat != null && bossCombat.FightActive)
+        {
+            CurrentObjective = "Defeat the boss";
+        }
+        else if (requiredCamp != null && requiredCamp.IsCleared)
+        {
+            CurrentObjective = "Enter boss arena";
+        }
+        else
+        {
+            CurrentObjective = "Clear the camp";
+        }
     }
-    else
-    {
-        CurrentObjective = "Clear the camp";
-    }
-    }
+
     public void ShowStatus(string message)
     {
         StatusMessage = message;

@@ -3,6 +3,7 @@ using UnityEngine;
 public class BossArenaTrigger : MonoBehaviour
 {
     [SerializeField] private BossController bossController;
+    [SerializeField] private BossCombat bossCombat;
     [SerializeField] private DemoObjectiveManager demoObjectiveManager;
     [SerializeField] private Camp requiredCamp;
 
@@ -28,12 +29,21 @@ public class BossArenaTrigger : MonoBehaviour
 
         hasTriggered = true;
 
-        Debug.Log("[BossArena] Player entered boss arena.");
-        bossController.PrintBossState();
+        Debug.Log("[BossArena] Player entered boss arena. Fight begins.");
+
+        if (bossController != null)
+        {
+            bossController.PrintBossState();
+        }
+
+        if (bossCombat != null)
+        {
+            bossCombat.BeginFight();
+        }
 
         if (demoObjectiveManager != null)
         {
-            demoObjectiveManager.TryCompleteDemo();
+            demoObjectiveManager.ShowStatus("Defeat the boss.");
         }
     }
 }

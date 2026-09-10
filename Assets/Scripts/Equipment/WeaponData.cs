@@ -17,6 +17,11 @@ public class WeaponData : ScriptableObject
     [SerializeField] private float lightAttackRange = 1.8f;
     [SerializeField] private float lightAttackRadius = 0.7f;
 
+    [Tooltip("Multiplier on attack animation playback speed and every attack code timer. " +
+             ">1 = faster/lighter swings, <1 = slower/heavier. Sword ~1.4, heavy axe ~1.0.")]
+    [Range(0.4f, 2f)]
+    [SerializeField] private float attackSpeedMultiplier = 1f;
+
     [Header("Light Attack Movement")]
     [Range(0f, 1f)]
     [SerializeField] private float lightMovementMultiplier = 0.35f;
@@ -80,6 +85,7 @@ public class WeaponData : ScriptableObject
     public float LightAttackRange => lightAttackRange;
     public float LightAttackRadius => lightAttackRadius;
     public float LightMovementMultiplier => lightMovementMultiplier;
+    public float AttackSpeedMultiplier => attackSpeedMultiplier;
 
     public float FirstForwardStep => firstForwardStep;
     public float SecondForwardStep => secondForwardStep;
@@ -124,6 +130,8 @@ public class WeaponData : ScriptableObject
     private void OnValidate()
     {
         baseDamage = Mathf.Max(1, baseDamage);
+
+        attackSpeedMultiplier = Mathf.Clamp(attackSpeedMultiplier, 0.4f, 2f);
 
         lightAttackRange = Mathf.Max(0f, lightAttackRange);
         lightAttackRadius = Mathf.Max(0f, lightAttackRadius);

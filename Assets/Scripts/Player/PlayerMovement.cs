@@ -5,20 +5,31 @@ public class PlayerMovement : MonoBehaviour
     [Header("Movement")]
     [SerializeField] private float moveSpeed = 6f;
     [SerializeField] private float rotationSpeed = 12f;
+    [Tooltip("How quickly the player ramps up to full speed. Higher = snappier.")]
+    [SerializeField] private float moveAcceleration = 45f;
+    [Tooltip("How quickly the player slows to a stop.")]
+    [SerializeField] private float moveDeceleration = 40f;
+
+    private Vector3 planarVelocity;
 
     [Header("Dodge Roll")]
     [SerializeField] private KeyCode dodgeKey = KeyCode.Space;
-    [SerializeField] private float dodgeSpeed = 11f;
-    [SerializeField] private float dodgeDuration = 0.35f;
-    [SerializeField] private float dodgeCooldown = 0.2f;
+    [Tooltip("Minimum roll speed. The dodge animation's root motion adds to this.")]
+    [SerializeField] private float dodgeSpeed = 3f;
+    [Tooltip("How long the roll state lasts (input lock). Match the dodge clip length.")]
+    [SerializeField] private float dodgeDuration = 0.95f;
+    [SerializeField] private float dodgeCooldown = 0.35f;
     [Min(0f)]
     [SerializeField] private float dodgeStaminaCost = 18f;
 
     [Tooltip("Delay after the roll starts before invulnerability begins.")]
-    [SerializeField] private float invulnerabilityStartDelay = 0.05f;
+    [SerializeField] private float invulnerabilityStartDelay = 0.08f;
 
     [Tooltip("How long the player remains invulnerable during the roll.")]
-    [SerializeField] private float invulnerabilityDuration = 0.22f;
+    [SerializeField] private float invulnerabilityDuration = 0.55f;
+
+    [SerializeField] private ParticleSystem dodgeVfx;
+    [SerializeField] private PlayerRootMotion rootMotion;
 
     [Header("References")]
     [SerializeField] private CameraFollow cameraFollow;
@@ -69,6 +80,11 @@ public class PlayerMovement : MonoBehaviour
     private void Awake()
     {
         rb = GetComponent<Rigidbody>();
+
+        if (rootMotion == null)
+        {
+            rootMotion = GetComponentInChildren<PlayerRootMotion>();
+        }
 
         if (playerAttack == null)
         {
@@ -250,9 +266,7 @@ public class PlayerMovement : MonoBehaviour
         if (Time.time < nextDodgeAllowedTime)
             return;
 
-        if (IsBlocking)
-            return;
-
+        // Dodging out of a block is allowed - BeginDodge drops the guard.
         if (playerAttack != null &&
             playerAttack.IsAttacking)
         {
@@ -285,6 +299,7 @@ public class PlayerMovement : MonoBehaviour
 
         remainingAttackStepDistance = 0f;
         attackStepSpeed = 0f;
+        planarVelocity = Vector3.zero;
 
         ResetParryWindow();
 
@@ -307,6 +322,12 @@ public class PlayerMovement : MonoBehaviour
 
         dodgeEndTime =
             Time.time + dodgeDuration;
+
+        CombatVfx.Play(
+            dodgeVfx,
+            transform.position,
+            -dodgeDirection
+        );
 
         Debug.Log(
             $"[PlayerMovement] Dodge started. " +
@@ -339,10 +360,16 @@ public class PlayerMovement : MonoBehaviour
 
     private void MoveDuringDodge()
     {
+        // The dodge animation's root motion (PlayerRootMotion) does most of the
+        // travel; this is just a floor so the roll always covers some ground.
+        float speed = rootMotion != null && rootMotion.RootMotionActive
+            ? dodgeSpeed
+            : 11f;
+
         Vector3 newPosition =
             rb.position +
             dodgeDirection *
-            dodgeSpeed *
+            speed *
             Time.fixedDeltaTime;
 
         rb.MovePosition(
@@ -412,14 +439,20 @@ public class PlayerMovement : MonoBehaviour
                 playerAttack.CurrentMovementMultiplier;
         }
 
-        if (movementDirection.sqrMagnitude >
-            0.01f)
-        {
-            totalDisplacement +=
-                movementDirection *
-                currentMoveSpeed *
-                Time.fixedDeltaTime;
-        }
+        Vector3 targetVelocity =
+            movementDirection.sqrMagnitude > 0.01f
+                ? movementDirection * currentMoveSpeed
+                : Vector3.zero;
+
+        float rate =
+            targetVelocity.sqrMagnitude > planarVelocity.sqrMagnitude
+                ? moveAcceleration
+                : moveDeceleration;
+
+        planarVelocity = Vector3.MoveTowards(
+            planarVelocity, targetVelocity, rate * Time.fixedDeltaTime);
+
+        totalDisplacement += planarVelocity * Time.fixedDeltaTime;
 
     if (remainingAttackStepDistance > 0f)
     {

@@ -37,6 +37,9 @@ public class PlayerEquipment : MonoBehaviour
     public bool HasShield =>
         equippedShield != null;
 
+    /// <summary>Fired when a loadout is equipped via the debug switch. Payload: "Weapon + Shield".</summary>
+    public event System.Action<string> OnLoadoutEquipped;
+
     private void Awake()
     {
         if (playerMovement == null)
@@ -185,6 +188,10 @@ public class PlayerEquipment : MonoBehaviour
             $"[PlayerEquipment] {loadoutName} equipped: " +
             $"{weapon.WeaponName} + " +
             $"{shield.ShieldName}."
+        );
+
+        OnLoadoutEquipped?.Invoke(
+            $"{weapon.WeaponName}  +  {shield.ShieldName}"
         );
     }
 

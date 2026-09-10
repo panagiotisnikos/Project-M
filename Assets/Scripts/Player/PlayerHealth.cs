@@ -8,6 +8,12 @@ public class PlayerHealth : MonoBehaviour
     [Header("Base Knockback")]
     [SerializeField] private float knockbackForce = 4f;
 
+    [Header("Feel / VFX")]
+    [SerializeField] private ParticleSystem parryVfx;
+    [SerializeField] private ParticleSystem hurtVfx;
+    [SerializeField] private float parryTrauma = 0.4f;
+    [SerializeField] private float hurtTrauma = 0.3f;
+
     [Header("References")]
     [SerializeField] private PlayerPerformanceTracker performanceTracker;
     [SerializeField] private PlayerMovement playerMovement;
@@ -68,7 +74,7 @@ public class PlayerHealth : MonoBehaviour
     public void TakeDamage(
     int damage,
     Vector3 hitDirection,
-    EnemyAI attacker)
+    IStaggerable attacker)
 {
     if (isDead)
         return;
@@ -184,13 +190,25 @@ public class PlayerHealth : MonoBehaviour
         finalKnockbackForce
     );
 
-    if (performanceTracker != null &&
-        finalDamage > 0)
+    if (finalDamage > 0)
     {
-        performanceTracker
-            .RegisterDamageTaken(
-                finalDamage
-            );
+        if (performanceTracker != null)
+        {
+            performanceTracker
+                .RegisterDamageTaken(
+                    finalDamage
+                );
+        }
+
+        CombatVfx.Play(
+            hurtVfx,
+            transform.position + Vector3.up
+        );
+
+        if (CameraShake.Instance != null)
+        {
+            CameraShake.Instance.AddTrauma(hurtTrauma);
+        }
     }
 
     Debug.Log(
@@ -205,18 +223,26 @@ public class PlayerHealth : MonoBehaviour
 }
 
     private void HandleParry(
-        EnemyAI attacker,
+        IStaggerable attacker,
         float staggerDuration)
     {
         Debug.Log(
             "[PlayerHealth] PARRY!"
         );
 
-        if (attacker != null)
+        attacker?.Stagger(
+            staggerDuration
+        );
+
+        CombatVfx.Play(
+            parryVfx,
+            transform.position + Vector3.up + transform.forward * 0.6f,
+            -transform.forward
+        );
+
+        if (CameraShake.Instance != null)
         {
-            attacker.Stagger(
-                staggerDuration
-            );
+            CameraShake.Instance.AddTrauma(parryTrauma);
         }
     }
 

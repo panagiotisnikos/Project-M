@@ -18,5 +18,7 @@ MonoBehaviour:
   blockedDamageMultiplier: 0
   blockedKnockbackMultiplier: 0.2
   blockingMoveSpeedMultiplier: 0.45
-  parryWindowDuration: 0.2
-  parryStaggerDuration: 1.25
+  parryWindowDuration: 0.24
+  parryStaggerDuration: 1.4
+  blockStaminaMultiplier: 1.2
+  parryStaminaCost: 3

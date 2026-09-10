@@ -22,11 +22,27 @@ public class PlayerAttack : MonoBehaviour
     [Range(0.01f, 0.5f)]
     [SerializeField] private float hitStopTimeScale = 0.05f;
 
+    [Header("Combo Feel")]
+    [Tooltip("Extra time after a light hit's recovery window during which a late light-attack " +
+             "press still continues the combo instead of starting a fresh one. Higher = more " +
+             "forgiving. Scaled by the weapon's attack speed.")]
+    [SerializeField] private float comboBufferGrace = 0.4f;
+
     [Header("Safety")]
-    [Tooltip("If a single attack state (windup or recovery) lasts longer than this in seconds, " +
-             "the swing is force-ended and a warning is logged. Watchdog against a missing or " +
-             "mis-authored animation event - it should never fire in normal play.")]
-    [SerializeField] private float attackStuckTimeout = 4f;
+    [Tooltip("If a windup never receives its AnimationAttackHit event within this long (scaled " +
+             "by attack speed), the hit is resolved in code so the player can never lock up. " +
+             "Should never fire in normal play.")]
+    [SerializeField] private float windupFallbackCap = 2.5f;
+
+    [Header("Light Hit")]
+    [Tooltip("Hit-reaction (flinch) duration applied to a target struck by a light attack.")]
+    [SerializeField] private float lightHitReactionDuration = 0.18f;
+
+    [Header("Feel / VFX")]
+    [SerializeField] private ParticleSystem lightHitVfx;
+    [SerializeField] private ParticleSystem heavyHitVfx;
+    [SerializeField] private float lightHitTrauma = 0.14f;
+    [SerializeField] private float heavyHitTrauma = 0.35f;
 
     [Header("References")]
     [SerializeField] private LayerMask enemyLayer;
@@ -53,6 +69,13 @@ public class PlayerAttack : MonoBehaviour
 
     private float stateEnteredTime;
 
+    /*
+     * While in Recovery, a light-attack press received any time before this
+     * moment continues the combo. After it, the swing ends and a fresh press
+     * starts a new combo from step 1.
+     */
+    private float comboWindowEnd;
+
     private Coroutine hitStopCoroutine;
     private float normalFixedDeltaTime;
 
@@ -68,6 +91,27 @@ public class PlayerAttack : MonoBehaviour
         currentState != AttackState.Idle
             ? currentComboStep
             : 0;
+
+    /*
+     * The active weapon's swing-speed multiplier (Animator playback + all code
+     * timers scale by this). Falls back to the equipped weapon between swings so
+     * PlayerAnimationController can prime the Animator before the first hit.
+     */
+    private float AttackSpeedMultiplier
+    {
+        get
+        {
+            WeaponData weapon = activeWeapon != null
+                ? activeWeapon
+                : GetEquippedWeapon();
+
+            return weapon != null
+                ? Mathf.Max(0.1f, weapon.AttackSpeedMultiplier)
+                : 1f;
+        }
+    }
+
+    public float CurrentAttackSpeed => AttackSpeedMultiplier;
 
     public float CurrentMovementMultiplier
     {
@@ -120,7 +164,7 @@ public class PlayerAttack : MonoBehaviour
         if (GameUIController.IsPaused)
             return;
 
-        TickStuckAttackWatchdog();
+        TickAttackState();
         ReadAttackInput();
     }
     private void ReadAttackInput()
@@ -197,27 +241,76 @@ public class PlayerAttack : MonoBehaviour
 }
 
     /*
-     * Safety net only. The attack lifecycle is driven by animation events
-     * (AnimationAttackHit / AnimationComboChain / AnimationAttackFinished).
-     * If one of those never arrives - a missing or mis-authored event - the
-     * player would otherwise be locked in an attack forever. This forces the
-     * swing to end after attackStuckTimeout and logs where it happened.
+     * Drives everything after the hit in code so the combo can never be lost to
+     * a late press or a dropped animation event:
+     *  - Windup: AnimationAttackHit resolves the hit. If it never arrives, a
+     *    code fallback resolves it after windupFallbackCap (safety only).
+     *  - Recovery: a buffered light press continues the combo immediately; with
+     *    no buffered press the swing ends once comboWindowEnd passes.
      */
-    private void TickStuckAttackWatchdog()
+    private void TickAttackState()
     {
-        if (currentState == AttackState.Idle)
-            return;
+        switch (currentState)
+        {
+            case AttackState.Windup:
 
-        if (Time.time - stateEnteredTime <= attackStuckTimeout)
-            return;
+                if (Time.time - stateEnteredTime >
+                    windupFallbackCap / AttackSpeedMultiplier)
+                {
+                    Debug.LogWarning(
+                        "[PlayerAttack] Windup exceeded the fallback cap " +
+                        "(missing AnimationAttackHit?). Resolving the hit in code."
+                    );
 
-        Debug.LogWarning(
-            $"[PlayerAttack] {currentState} exceeded " +
-            $"{attackStuckTimeout:0.0}s (missing animation event?). " +
-            $"Force-ending the attack."
+                    PerformAttackHit();
+                    BeginAttackRecovery();
+                }
+
+                break;
+
+            case AttackState.Recovery:
+
+                TickRecovery();
+                break;
+        }
+    }
+
+    private void TickRecovery()
+    {
+        if (currentAttackType == AttackType.Light &&
+            nextAttackQueued &&
+            currentComboStep < MaxComboSteps)
+        {
+            TryAdvanceLightCombo();
+            return;
+        }
+
+        if (Time.time >= comboWindowEnd)
+        {
+            FinishAttackSequence();
+        }
+    }
+
+    private void TryAdvanceLightCombo()
+    {
+        int nextComboStep = currentComboStep + 1;
+
+        if (!TrySpendStamina(
+                GetLightStaminaCost(nextComboStep),
+                $"light attack {nextComboStep}"))
+        {
+            nextAttackQueued = false;
+            return;
+        }
+
+        currentComboStep = nextComboStep;
+        nextAttackQueued = false;
+
+        BeginAttackWindup();
+
+        Debug.Log(
+            $"[PlayerAttack] Chained into light attack {currentComboStep}."
         );
-
-        FinishAttackSequence();
     }
 
     private void StartLightCombo(
@@ -287,7 +380,10 @@ public class PlayerAttack : MonoBehaviour
 
         stateEnteredTime = Time.time;
 
-        if (playerMovement != null)
+        // Light attacks get a small coded forward step; the heavy attack's lunge
+        // comes from the animation's root motion (PlayerRootMotion) instead.
+        if (playerMovement != null &&
+            currentAttackType == AttackType.Light)
         {
             playerMovement.QueueAttackStep(
                 GetCurrentForwardStep()
@@ -344,22 +440,17 @@ public class PlayerAttack : MonoBehaviour
 
         foreach (Collider hit in hits)
         {
-            EnemyHealth enemyHealth =
-                hit.GetComponent<EnemyHealth>();
+            IDamageable target =
+                hit.GetComponentInParent<IDamageable>();
 
-            if (enemyHealth == null)
-            {
-                enemyHealth =
-                    hit.GetComponentInParent<EnemyHealth>();
-            }
-
-            if (enemyHealth == null)
+            if (target == null)
                 continue;
 
-            if (currentAttackType ==
-                AttackType.Heavy)
+            bool heavy = currentAttackType == AttackType.Heavy;
+
+            if (heavy)
             {
-                enemyHealth.TakeDamage(
+                target.TakeDamage(
                     currentDamage,
                     transform.forward,
                     activeWeapon.HeavyKnockbackMultiplier,
@@ -368,9 +459,26 @@ public class PlayerAttack : MonoBehaviour
             }
             else
             {
-                enemyHealth.TakeDamage(
+                target.TakeDamage(
                     currentDamage,
-                    transform.forward
+                    transform.forward,
+                    1f,
+                    lightHitReactionDuration
+                );
+            }
+
+            Vector3 contact = hit.ClosestPoint(attackCenter);
+
+            CombatVfx.Play(
+                heavy ? heavyHitVfx : lightHitVfx,
+                contact,
+                -transform.forward
+            );
+
+            if (CameraShake.Instance != null)
+            {
+                CameraShake.Instance.AddTrauma(
+                    heavy ? heavyHitTrauma : lightHitTrauma
                 );
             }
 
@@ -423,6 +531,16 @@ public class PlayerAttack : MonoBehaviour
             AttackState.Recovery;
 
         stateEnteredTime = Time.time;
+
+        float recovery = GetCurrentRecoveryDuration();
+
+        if (currentAttackType == AttackType.Light)
+        {
+            recovery += comboBufferGrace;
+        }
+
+        comboWindowEnd =
+            Time.time + recovery / AttackSpeedMultiplier;
 
         Debug.Log(
             currentAttackType ==
@@ -814,60 +932,16 @@ public class PlayerAttack : MonoBehaviour
         BeginAttackRecovery();
     }
 
-    public void AnimationAttackFinished(
-        int expectedComboStep)
+    /*
+     * Combo continuation and swing end are now code-driven (see TickRecovery).
+     * These handlers are kept as no-ops so the existing clip events don't warn,
+     * and so re-timed or re-authored clips stay compatible.
+     */
+    public void AnimationAttackFinished(int expectedComboStep)
     {
-        if (currentState == AttackState.Idle)
-            return;
-
-        if (currentAttackType == AttackType.Light &&
-            currentComboStep != expectedComboStep)
-        {
-            return;
-        }
-
-        FinishAttackSequence();
     }
+
     public void AnimationComboChain(int expectedComboStep)
     {
-        if (currentAttackType != AttackType.Light)
-            return;
-
-        if (currentComboStep != expectedComboStep)
-            return;
-
-        if (!nextAttackQueued)
-            return;
-
-        if (currentComboStep >= MaxComboSteps)
-            return;
-
-        int nextComboStep =
-            currentComboStep + 1;
-
-        float staminaCost =
-            GetLightStaminaCost(
-                nextComboStep
-            );
-
-        if (!TrySpendStamina(
-                staminaCost,
-                $"light attack {nextComboStep}"))
-        {
-            nextAttackQueued = false;
-            return;
-        }
-
-        currentComboStep =
-            nextComboStep;
-
-        nextAttackQueued = false;
-
-        BeginAttackWindup();
-
-        Debug.Log(
-            $"[PlayerAttack] Chained into light attack " +
-            $"{currentComboStep}."
-        );
     }
 }

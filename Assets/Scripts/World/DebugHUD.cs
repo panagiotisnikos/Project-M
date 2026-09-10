@@ -318,8 +318,7 @@ public class DebugHUD : MonoBehaviour
             return;
         }
 
-        if (demoObjectiveManager.CurrentObjective !=
-            "Demo complete")
+        if (!demoObjectiveManager.IsDemoCompleted)
         {
             return;
         }
