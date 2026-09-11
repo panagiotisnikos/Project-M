@@ -49,6 +49,7 @@ public class GameUIController : MonoBehaviour
     [SerializeField] private GameObject pausePanel;
     [SerializeField] private KeyCode pauseKey = KeyCode.Escape;
     [SerializeField] private string mainMenuSceneName = "Main Menu";
+    [SerializeField] private OptionsMenuUI optionsMenu;
     [Header("Death Screen")]
     [SerializeField] private GameObject deathPanel;
     [SerializeField] private float deathScreenDelay = 0.6f;
@@ -388,7 +389,7 @@ private IEnumerator ShowControlsRoutine()
 
 private void HandleLoadoutEquipped(string loadoutLabel)
 {
-    if (loadoutToast == null)
+    if (loadoutToast == null || !GameSettings.ShowToasts)
         return;
 
     if (loadoutToastText != null)
@@ -549,6 +550,20 @@ public void ResumeGame()
     Debug.Log(
         "[GameUI] Game resumed."
     );
+}
+
+public void OpenOptionsFromPause()
+{
+    if (optionsMenu == null)
+        return;
+
+    if (pausePanel != null)
+        pausePanel.SetActive(false);
+
+    optionsMenu.Open(() =>
+    {
+        if (pausePanel != null) pausePanel.SetActive(true);
+    });
 }
 
 public void ShowPauseControls()

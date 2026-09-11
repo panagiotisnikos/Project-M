@@ -10,6 +10,7 @@ public class MainMenuController : MonoBehaviour
     [SerializeField] private GameObject mainPanel;
     [SerializeField] private GameObject controlsPanel;
     [SerializeField] private GameObject creditsPanel;
+    [SerializeField] private OptionsMenuUI optionsMenu;
 
     private void Start()
     {
@@ -60,6 +61,12 @@ public class MainMenuController : MonoBehaviour
             false,
             false
         );
+    }
+
+    public void ShowOptions()
+    {
+        SetPanelStates(false, false, false);
+        if (optionsMenu != null) optionsMenu.Open(ShowMainMenu);
     }
 
     public void QuitGame()

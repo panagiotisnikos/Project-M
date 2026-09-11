@@ -14,6 +14,10 @@ public class PlayerHealth : MonoBehaviour
     [SerializeField] private float parryTrauma = 0.4f;
     [SerializeField] private float hurtTrauma = 0.3f;
 
+    [Header("Audio")]
+    [SerializeField] private AudioClip hurtGruntSfx;
+    [Range(0f, 1f)] [SerializeField] private float hurtGruntVolume = 0.5f;
+
     [Header("References")]
     [SerializeField] private PlayerPerformanceTracker performanceTracker;
     [SerializeField] private PlayerMovement playerMovement;
@@ -28,6 +32,13 @@ public class PlayerHealth : MonoBehaviour
     public bool IsDead => isDead;
     public int CurrentHealth => currentHealth;
     public int MaxHealth => maxHealth;
+
+    /// <summary>Restore health, clamped to max. Used by consumables.</summary>
+    public void Heal(int amount)
+    {
+        if (isDead || amount <= 0) return;
+        currentHealth = Mathf.Min(maxHealth, currentHealth + amount);
+    }
 
     private void Awake()
     {
@@ -94,6 +105,8 @@ public class PlayerHealth : MonoBehaviour
 
         return;
     }
+
+    damage = ApplyArmorReduction(damage);
 
     ShieldData shield =
         GetEquippedShield();
@@ -215,6 +228,8 @@ public class PlayerHealth : MonoBehaviour
             transform.position + Vector3.up
         );
 
+        CombatAudio.Play(hurtGruntSfx, transform.position, hurtGruntVolume);
+
         if (CameraShake.Instance != null)
         {
             CameraShake.Instance.AddTrauma(hurtTrauma);
@@ -267,6 +282,16 @@ public class PlayerHealth : MonoBehaviour
             return null;
 
         return playerEquipment.EquippedShield;
+    }
+
+    /// <summary>Flat passive reduction from equipped armor, applied before block/parry.</summary>
+    private int ApplyArmorReduction(int damage)
+    {
+        if (playerEquipment == null || playerEquipment.EquippedArmor == null)
+            return damage;
+
+        float reduction = playerEquipment.EquippedArmor.DamageReduction;
+        return Mathf.Max(1, Mathf.RoundToInt(damage * (1f - reduction)));
     }
 
     private bool IsAttackInsideBlockAngle(

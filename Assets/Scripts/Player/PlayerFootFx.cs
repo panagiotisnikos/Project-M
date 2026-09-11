@@ -20,6 +20,15 @@ public class PlayerFootFx : MonoBehaviour
     [Tooltip("Puff spawns slightly behind the player as they move.")]
     [SerializeField] private float trailBias = 0.15f;
 
+    [Header("Audio")]
+    [SerializeField] private AudioClip stepLeftSfx;
+    [SerializeField] private AudioClip stepRightSfx;
+    [Tooltip("Played instead of the grass L/R pair when a downward ray from the foot hits " +
+             "something whose name suggests stone (camp paths, standing stones, rock props).")]
+    [SerializeField] private AudioClip stoneStepSfx;
+    [Range(0f, 1f)] [SerializeField] private float stepVolume = 0.3f;
+    [SerializeField] private LayerMask groundRayMask = ~0;
+
     private float nextStepTime;
     private bool wasDodging;
     private int footSide = 1;
@@ -42,20 +51,39 @@ public class PlayerFootFx : MonoBehaviour
 
         if (!playerMovement.IsDodging && playerMovement.IsMoving && Time.time >= nextStepTime)
         {
-            Spawn(stepDustPrefab, footWidth * footSide);
+            Vector3 footPos = Spawn(stepDustPrefab, footWidth * footSide);
+            PlayFootstepAudio(footPos);
             footSide = -footSide;
             nextStepTime = Time.time + stepInterval;
         }
     }
 
-    private void Spawn(ParticleSystem prefab, float sideOffset)
+    private Vector3 Spawn(ParticleSystem prefab, float sideOffset)
     {
-        if (prefab == null) return;
         // at the feet, offset to the stepping foot and slightly behind the direction of travel
         Vector3 p = transform.position
                     - Vector3.up * legLength
                     + transform.right * sideOffset
                     - transform.forward * trailBias;
-        CombatVfx.Play(prefab, p, Vector3.up);
+        if (prefab != null) CombatVfx.Play(prefab, p, Vector3.up);
+        return p;
+    }
+
+    private void PlayFootstepAudio(Vector3 footPos)
+    {
+        bool onStone = false;
+        if (Physics.Raycast(footPos + Vector3.up * 0.5f, Vector3.down, out var hit, 1.5f, groundRayMask, QueryTriggerInteraction.Ignore))
+        {
+            string n = hit.collider.name.ToLowerInvariant();
+            onStone = n.Contains("stone") || n.Contains("rock") || n.Contains("cliff") || n.Contains("path");
+        }
+
+        if (onStone && stoneStepSfx != null)
+        {
+            CombatAudio.Play(stoneStepSfx, footPos, stepVolume);
+            return;
+        }
+
+        CombatAudio.Play(footSide > 0 ? stepRightSfx : stepLeftSfx, footPos, stepVolume);
     }
 }

@@ -5,6 +5,7 @@ public class PlayerEquipment : MonoBehaviour
     [Header("Currently Equipped")]
     [SerializeField] private WeaponData equippedWeapon;
     [SerializeField] private ShieldData equippedShield;
+    [SerializeField] private ArmorData equippedArmor;
 
     [Header("Debug Loadout Switching")]
     [SerializeField] private bool enableDebugLoadoutSwitching = true;
@@ -31,14 +32,23 @@ public class PlayerEquipment : MonoBehaviour
     public ShieldData EquippedShield =>
         equippedShield;
 
+    public ArmorData EquippedArmor =>
+        equippedArmor;
+
     public bool HasWeapon =>
         equippedWeapon != null;
 
     public bool HasShield =>
         equippedShield != null;
 
+    public bool HasArmor =>
+        equippedArmor != null;
+
     /// <summary>Fired when a loadout is equipped via the debug switch. Payload: "Weapon + Shield".</summary>
     public event System.Action<string> OnLoadoutEquipped;
+
+    /// <summary>Fired whenever the equipped armor changes, so PlayerArmorVisuals can refresh.</summary>
+    public event System.Action<ArmorData> OnArmorEquipped;
 
     private void Awake()
     {
@@ -140,6 +150,42 @@ public class PlayerEquipment : MonoBehaviour
         LogCurrentLoadout(
             "Equipped loadout"
         );
+    }
+
+    /// <summary>
+    /// Equip a single piece from the inventory. Sets the field and fires
+    /// OnLoadoutEquipped so PlayerWeaponVisuals and the HUD update, exactly like
+    /// the old loadout swap did.
+    /// </summary>
+    public void EquipWeaponItem(WeaponData weapon)
+    {
+        equippedWeapon = weapon;
+        NotifyLoadoutChanged();
+    }
+
+    public void EquipShieldItem(ShieldData shield)
+    {
+        equippedShield = shield;
+        NotifyLoadoutChanged();
+    }
+
+    /// <summary>Equip an armor piece from the inventory. Cosmetic tier swap + damage reduction.</summary>
+    public void EquipArmorItem(ArmorData armor)
+    {
+        equippedArmor = armor;
+        Debug.Log(
+            $"[PlayerEquipment] Equipped armor: " +
+            $"{(armor != null ? armor.ArmorName : "None")}."
+        );
+        OnArmorEquipped?.Invoke(equippedArmor);
+    }
+
+    private void NotifyLoadoutChanged()
+    {
+        string w = equippedWeapon != null ? equippedWeapon.WeaponName : "Unarmed";
+        string s = equippedShield != null ? equippedShield.ShieldName : "No Shield";
+        LogCurrentLoadout("Equipped");
+        OnLoadoutEquipped?.Invoke($"{w}  +  {s}");
     }
 
     public void UnequipWeapon()

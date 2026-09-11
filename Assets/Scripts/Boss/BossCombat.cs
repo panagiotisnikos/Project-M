@@ -103,6 +103,14 @@ public class BossCombat : MonoBehaviour, IStaggerable
     [SerializeField] private float lungeTrauma = 0.45f;
     [SerializeField] private float phaseTrauma = 0.3f;
 
+    [Header("Audio")]
+    [SerializeField] private AudioClip aggroSfx;
+    [Tooltip("Slam's ground impact.")]
+    [SerializeField] private AudioClip stompSfx;
+    [Tooltip("Sweep and Lunge impacts - the boss's other attacks.")]
+    [SerializeField] private AudioClip defaultAttackSfx;
+    [Range(0f, 1f)] [SerializeField] private float bossSfxVolume = 0.6f;
+
     private Rigidbody rb;
     private Renderer bossRenderer;
     private Color originalColor;
@@ -218,6 +226,7 @@ public class BossCombat : MonoBehaviour, IStaggerable
         FightActive = true;
         arenaAnchor = transform.position;
         nextAttackTime = Time.time + firstAttackDelay;
+        CombatAudio.Play(aggroSfx, transform.position, bossSfxVolume);
         ChangeState(BossState.Idle);
 
         Debug.Log("[Boss] Fight started.");
@@ -518,6 +527,11 @@ public class BossCombat : MonoBehaviour, IStaggerable
                 slamImpactVfx,
                 transform.position + transform.forward * slamReach
             );
+            CombatAudio.Play(stompSfx, transform.position, bossSfxVolume);
+        }
+        else
+        {
+            CombatAudio.Play(defaultAttackSfx, transform.position, bossSfxVolume);
         }
 
         ResolveMeleeStrike();
@@ -653,6 +667,7 @@ public class BossCombat : MonoBehaviour, IStaggerable
             FireChargeImpact();
             AddTrauma(lungeTrauma);
             CombatVfx.Play(lungeImpactVfx, transform.position + Vector3.up * 0.5f);
+            CombatAudio.Play(defaultAttackSfx, transform.position, bossSfxVolume);
             DealDamageToPlayer(lungeDamage, DirectionToPlayer());
         }
     }

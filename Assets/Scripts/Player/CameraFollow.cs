@@ -11,7 +11,7 @@ public class CameraFollow : MonoBehaviour
     [SerializeField] private float yaw = 0f;
 
     [Header("Control")]
-    [SerializeField] private float mouseSensitivity = 3f;
+    [Tooltip("Sensitivity and invert-Y now come from GameSettings (set via the options menu).")]
     [SerializeField] private float minPitch = -10f;
     [SerializeField] private float maxPitch = 65f;
     [SerializeField] private float minDistance = 4f;
@@ -47,12 +47,19 @@ public class CameraFollow : MonoBehaviour
         if (target == null)
             return;
 
-        yaw += Input.GetAxis("Mouse X") * mouseSensitivity;
-        pitch -= Input.GetAxis("Mouse Y") * mouseSensitivity;
-        pitch = Mathf.Clamp(pitch, minPitch, maxPitch);
+        // The mouse drives the UI while the pack is open - keep following, stop looking.
+        if (!InventoryUI.IsOpen)
+        {
+            float sensitivity = GameSettings.MouseSensitivity;
+            float pitchSign = GameSettings.InvertY ? 1f : -1f;
 
-        distance -= Input.GetAxis("Mouse ScrollWheel") * 4f;
-        distance = Mathf.Clamp(distance, minDistance, maxDistance);
+            yaw += Input.GetAxis("Mouse X") * sensitivity;
+            pitch += Input.GetAxis("Mouse Y") * sensitivity * pitchSign;
+            pitch = Mathf.Clamp(pitch, minPitch, maxPitch);
+
+            distance -= Input.GetAxis("Mouse ScrollWheel") * 4f;
+            distance = Mathf.Clamp(distance, minDistance, maxDistance);
+        }
 
         Quaternion targetRotation = Quaternion.Euler(pitch, yaw, 0f);
         Vector3 focusPoint = target.position + Vector3.up * targetHeight;

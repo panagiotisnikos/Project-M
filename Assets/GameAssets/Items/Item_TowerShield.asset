@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7db28fa14f522054c9d5354814f40afe, type: 3}
+  m_Name: Item_TowerShield
+  m_EditorClassIdentifier: Assembly-CSharp::ItemData
+  id: TowerShield
+  displayName: Tower Shield
+  description: Heavy. Wide guard, weak parry.
+  icon: {fileID: 21300000, guid: 3e4a8c83f0508ec45aa6f47cb8a7f1ea, type: 3}
+  type: 1
+  maxStack: 1
+  weight: 9
+  weaponData: {fileID: 0}
+  shieldData: {fileID: 11400000, guid: 4b02fc3bf8e61984ea4f29f2a06b4d9a, type: 2}
+  staminaRegenBonus: 0
+  healPerSecond: 0
+  buffDuration: 0

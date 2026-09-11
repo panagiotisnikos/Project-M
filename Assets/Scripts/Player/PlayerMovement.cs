@@ -36,6 +36,10 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField] private PlayerAttack playerAttack;
     [SerializeField] private PlayerEquipment playerEquipment;
     [SerializeField] private PlayerStamina playerStamina;
+    [SerializeField] private PlayerInventory playerInventory;
+
+    [Tooltip("Move speed multiplier while over the carry limit.")]
+    [SerializeField] private float encumberedSpeedMultiplier = 0.5f;
 
     private Rigidbody rb;
 
@@ -104,6 +108,12 @@ public class PlayerMovement : MonoBehaviour
                 GetComponent<PlayerStamina>();
         }
 
+        if (playerInventory == null)
+        {
+            playerInventory =
+                GetComponent<PlayerInventory>();
+        }
+
         if (playerStamina == null)
         {
             Debug.LogWarning(
@@ -134,6 +144,13 @@ public class PlayerMovement : MonoBehaviour
         if (IsDodging)
         {
             UpdateDodge();
+            return;
+        }
+
+        // Pack open: WASD still moves, but no blocking / dodging (mouse is on the UI).
+        if (InventoryUI.IsOpen)
+        {
+            IsBlocking = false;
             return;
         }
 
@@ -266,9 +283,20 @@ public class PlayerMovement : MonoBehaviour
         if (Time.time < nextDodgeAllowedTime)
             return;
 
+        // Over-encumbered: too heavy to roll.
+        if (playerInventory != null &&
+            playerInventory.IsOverEncumbered)
+        {
+            return;
+        }
+
         // Dodging out of a block is allowed - BeginDodge drops the guard.
+        // Dodging out of an attack is only allowed once the swing has resolved
+        // and we're in Recovery endlag - the Windup/telegraph itself still can't
+        // be skipped.
         if (playerAttack != null &&
-            playerAttack.IsAttacking)
+            playerAttack.IsAttacking &&
+            !playerAttack.CanCancelIntoDodge)
         {
             return;
         }
@@ -294,6 +322,11 @@ public class PlayerMovement : MonoBehaviour
 
     private void BeginDodge()
     {
+        if (playerAttack != null && playerAttack.IsAttacking)
+        {
+            playerAttack.CancelForDodge();
+        }
+
         IsDodging = true;
         IsBlocking = false;
 
@@ -420,6 +453,12 @@ public class PlayerMovement : MonoBehaviour
 
         float currentMoveSpeed =
             moveSpeed;
+
+        if (playerInventory != null &&
+            playerInventory.IsOverEncumbered)
+        {
+            currentMoveSpeed *= encumberedSpeedMultiplier;
+        }
 
         if (IsBlocking)
         {

@@ -18,7 +18,7 @@ MonoBehaviour:
   lightAttackRange: 1.8
   lightAttackRadius: 0.7
   attackSpeedMultiplier: 1.4
-  lightMovementMultiplier: 0.35
+  lightMovementMultiplier: 0.55
   firstForwardStep: 0.22
   secondForwardStep: 0.28
   thirdForwardStep: 0.38
@@ -38,7 +38,7 @@ MonoBehaviour:
   heavyRecoveryDuration: 0.75
   heavyKnockbackMultiplier: 1.8
   heavyHitReactionDuration: 0.35
-  heavyMovementMultiplier: 0.1
+  heavyMovementMultiplier: 0.25
   heavyForwardStep: 0.65
   firstLightStaminaCost: 8
   secondLightStaminaCost: 9

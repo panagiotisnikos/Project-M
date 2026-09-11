@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7db28fa14f522054c9d5354814f40afe, type: 3}
+  m_Name: Item_CharredMeat
+  m_EditorClassIdentifier: Assembly-CSharp::ItemData
+  id: CharredMeat
+  displayName: Charred Meat
+  description: Greasy and hot. Steadies the wind and knits wounds a while.
+  icon: {fileID: 21300000, guid: c6d613672cf22d440a24b8c1fe62464a, type: 3}
+  type: 2
+  maxStack: 5
+  weight: 1
+  weaponData: {fileID: 0}
+  shieldData: {fileID: 0}
+  staminaRegenBonus: 0.6
+  healPerSecond: 3
+  buffDuration: 90

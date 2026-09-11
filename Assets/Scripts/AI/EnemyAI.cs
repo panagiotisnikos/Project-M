@@ -49,6 +49,11 @@ public class EnemyAI : MonoBehaviour, IStaggerable
     [Header("Stagger")]
     [SerializeField] private Color staggerColor = Color.cyan;
 
+    [Header("Audio")]
+    [Tooltip("Played the instant this enemy notices the player (role-specific: Brute/StalkerAggro).")]
+    [SerializeField] private AudioClip aggroSfx;
+    [Range(0f, 1f)] [SerializeField] private float aggroVolume = 0.5f;
+
     [Header("Idle Life")]
     [Tooltip("How far the enemy drifts from its start point while idle.")]
     [SerializeField] private float wanderRadius = 5f;
@@ -345,6 +350,7 @@ private float staggerEndTime;
         alertStartTime = Time.time;
         hasWanderPoint = false;
         SetTelegraphVisual(false);
+        CombatAudio.Play(aggroSfx, transform.position, aggroVolume);
         AggroReacted?.Invoke();
     }
 
@@ -699,7 +705,17 @@ private float staggerEndTime;
 
     public void HitReact(float duration)
     {
-        if (currentState == EnemyState.Staggered)
+        /*
+         * A committed attack (windup/recovery) must not flinch: HitReact would
+         * knock it back to Chase, which - since the player is already in melee
+         * range - immediately calls BeginAttackWindup() again. That let every
+         * player hit restart the enemy's swing from scratch, so attacking more
+         * made the enemy visibly attack more often instead of just taking
+         * damage. A real parry still interrupts via Stagger().
+         */
+        if (currentState == EnemyState.Staggered ||
+            currentState == EnemyState.AttackWindup ||
+            currentState == EnemyState.AttackRecovery)
             return;
 
         SetTelegraphVisual(false);

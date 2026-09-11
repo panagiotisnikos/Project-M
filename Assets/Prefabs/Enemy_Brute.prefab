@@ -17,6 +17,7 @@ GameObject:
   - component: {fileID: 958650685423063475}
   - component: {fileID: 9176771135269599257}
   - component: {fileID: 455721486364363363}
+  - component: {fileID: 5396697854941571367}
   m_Layer: 3
   m_Name: Enemy_Brute
   m_TagString: Untagged
@@ -173,8 +174,13 @@ MonoBehaviour:
   attackRecoveryDuration: 0.8
   attackTelegraphColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
   staggerColor: {r: 0, g: 1, b: 1, a: 1}
-  telegraphPunchScale: 1.14
-  telegraphPunchSpeed: 14
+  aggroSfx: {fileID: 8300000, guid: 4cce35f0e6352554c91cd1543a009512, type: 3}
+  aggroVolume: 0.5
+  wanderRadius: 5
+  wanderMinPause: 2.5
+  wanderMaxPause: 6.5
+  wanderSpeedMultiplier: 0.35
+  alertDuration: 0.5
 --- !u!114 &958650685423063475
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -196,6 +202,8 @@ MonoBehaviour:
   hitVfx: {fileID: 4966167867889800312, guid: 2670f1b1683bf8140b4108bd8150de51, type: 3}
   deathVfx: {fileID: 3928359717916625130, guid: 9adee22f2824f8c43bc4be1355ad870b, type: 3}
   deathLinger: 1.4
+  hitSfx: {fileID: 8300000, guid: 93b6bc6b62d4b4e468f6e8ee02c71ae1, type: 3}
+  hitVolume: 0.45
   performanceTracker: {fileID: 0}
   enemyAI: {fileID: 0}
 --- !u!114 &9176771135269599257
@@ -214,6 +222,8 @@ MonoBehaviour:
   enemyAI: {fileID: 8085732610727737257}
   enemyHealth: {fileID: 958650685423063475}
   speedDamp: 10
+  idleBobAmount: 0.03
+  idleBobSpeed: 1.6
   staggerTiltDegrees: 22
   staggerSink: 0.08
   staggerFrozenAnimSpeed: 0.05
@@ -239,6 +249,41 @@ NavMeshAgent:
   m_BaseOffset: 0
   m_WalkableMask: 4294967295
   m_ObstacleAvoidanceType: 1
+--- !u!114 &5396697854941571367
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7175902091935172005}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 87c406e52baf9f444b7b59ee622d0597, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LootDropper
+  pickupPrefab: {fileID: 6296264857438139537, guid: 989f422ae294ef5438ec0f9e6810f596, type: 3}
+  table:
+  - item: {fileID: 11400000, guid: 52de059eef387ee419eb33b739b1c499, type: 2}
+    min: 1
+    max: 2
+    chance: 0.9
+  - item: {fileID: 11400000, guid: 5ac8b705f83f36540b76d476060bd297, type: 2}
+    min: 1
+    max: 1
+    chance: 0.5
+  - item: {fileID: 11400000, guid: ef41e59bc1887654c96cff011613794d, type: 2}
+    min: 1
+    max: 1
+    chance: 0.22
+  - item: {fileID: 11400000, guid: 49e9ba1f77da43a45843e024095b5f71, type: 2}
+    min: 1
+    max: 1
+    chance: 0.06
+  - item: {fileID: 11400000, guid: 9b5b631d4055f1648881af2b44f2cc9f, type: 2}
+    min: 1
+    max: 2
+    chance: 0.35
+  scatter: 0.6
 --- !u!1001 &18763403000803821
 PrefabInstance:
   m_ObjectHideFlags: 0

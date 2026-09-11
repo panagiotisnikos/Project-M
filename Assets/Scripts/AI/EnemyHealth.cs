@@ -18,6 +18,11 @@ public class EnemyHealth : MonoBehaviour, IDamageable
     [SerializeField] private ParticleSystem deathVfx;
     [SerializeField] private float deathLinger = 0.4f;
 
+    [Header("Audio")]
+    [Tooltip("Role-specific hit reaction (Brute/StalkerGetsHit).")]
+    [SerializeField] private AudioClip hitSfx;
+    [Range(0f, 1f)] [SerializeField] private float hitVolume = 0.45f;
+
     [Header("References")]
     [SerializeField] private PlayerPerformanceTracker performanceTracker;
     [SerializeField] private EnemyAI enemyAI;
@@ -101,6 +106,8 @@ public class EnemyHealth : MonoBehaviour, IDamageable
             transform.position + Vector3.up * 0.9f,
             -hitDirection
         );
+
+        CombatAudio.Play(hitSfx, transform.position, hitVolume);
 
         StartHitFlash();
 

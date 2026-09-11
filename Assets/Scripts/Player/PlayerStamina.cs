@@ -19,6 +19,19 @@ public class PlayerStamina : MonoBehaviour
 
     private float regenerationResumeTime;
 
+    private float regenBuffMultiplier = 1f;
+    private float regenBuffEndTime;
+
+    /// <summary>Timed stamina-regen boost from a consumable (e.g. food).</summary>
+    public void ApplyRegenBuff(float multiplier, float duration)
+    {
+        regenBuffMultiplier = Mathf.Max(1f, multiplier);
+        regenBuffEndTime = Time.time + Mathf.Max(0f, duration);
+    }
+
+    public bool RegenBuffActive => Time.time < regenBuffEndTime;
+    public float RegenBuffRemaining => Mathf.Max(0f, regenBuffEndTime - Time.time);
+
     public float CurrentStamina =>
         currentStamina;
 
@@ -91,6 +104,11 @@ public class PlayerStamina : MonoBehaviour
         {
             regenerationMultiplier =
                 blockingRegenerationMultiplier;
+        }
+
+        if (Time.time < regenBuffEndTime)
+        {
+            regenerationMultiplier *= regenBuffMultiplier;
         }
 
         float regenerationAmount =

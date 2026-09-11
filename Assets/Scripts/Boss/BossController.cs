@@ -24,6 +24,14 @@ public class BossController : MonoBehaviour
     private bool campDisabledSummons;
     private bool campDisabledDecayAura;
 
+    private void Awake()
+    {
+        if (worldAdaptationManager == null)
+        {
+            worldAdaptationManager = FindFirstObjectByType<WorldAdaptationManager>();
+        }
+    }
+
     private void Update()
     {
         RefreshAbilities();
@@ -37,13 +45,23 @@ public class BossController : MonoBehaviour
     /// <summary>
     /// The boss starts with its full kit; the only thing that weakens it is
     /// clearing camps (the "prepare, then fight" loop). Adaptation no longer
-    /// touches the boss - the world's response to the player is atmospheric.
+    /// touches the boss's stats - but the decay aura IS the world's reaction to
+    /// a skilled player, so it stays gated to the Decaying world state (see
+    /// BossDecayAura). Without this check hasDecayAura defaulted true and
+    /// stayed true all fight, since neither existing camp grants the
+    /// DisableDecayAura reward - the aura ticked unblockable damage on
+    /// proximity the whole time, with no visible attack to explain it.
     /// </summary>
     private void RefreshAbilities()
     {
         canHeal = !campDisabledHealing;
         canSummonMinions = !campDisabledSummons;
-        hasDecayAura = !campDisabledDecayAura;
+
+        bool worldWantsDecayAura =
+            worldAdaptationManager != null &&
+            worldAdaptationManager.CurrentState == WorldAdaptationManager.WorldState.Decaying;
+
+        hasDecayAura = worldWantsDecayAura && !campDisabledDecayAura;
 
         int weakened = (campDisabledHealing ? 1 : 0)
                      + (campDisabledSummons ? 1 : 0)

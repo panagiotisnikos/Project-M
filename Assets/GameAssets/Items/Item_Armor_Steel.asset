@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7db28fa14f522054c9d5354814f40afe, type: 3}
+  m_Name: Item_Armor_Steel
+  m_EditorClassIdentifier: Assembly-CSharp::ItemData
+  id: ArmorSteel
+  displayName: Steel Armor
+  description: Full steel plate with a closed helm. Reduces incoming damage significantly.
+  icon: {fileID: 21300000, guid: 814391355242f454bb55a8c7a1626ec6, type: 3}
+  type: 2
+  maxStack: 1
+  weight: 18
+  weaponData: {fileID: 0}
+  shieldData: {fileID: 0}
+  armorData: {fileID: 11400000, guid: b2cac744bc73ba74aac7357e82eedab2, type: 2}
+  staminaRegenBonus: 0
+  healPerSecond: 0
+  buffDuration: 0

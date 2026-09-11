@@ -44,6 +44,14 @@ public class PlayerAttack : MonoBehaviour
     [SerializeField] private float lightHitTrauma = 0.14f;
     [SerializeField] private float heavyHitTrauma = 0.35f;
 
+    [Header("Audio")]
+    [Tooltip("Swing whoosh for light combo steps 1 and 2.")]
+    [SerializeField] private AudioClip lightSwing12Sfx;
+    [Tooltip("Swing whoosh for the 3rd (finisher) light combo step.")]
+    [SerializeField] private AudioClip lightSwing3Sfx;
+    [SerializeField] private AudioClip heavySwingSfx;
+    [Range(0f, 1f)] [SerializeField] private float swingVolume = 0.45f;
+
     [Header("References")]
     [SerializeField] private LayerMask enemyLayer;
     [SerializeField] private PlayerMovement playerMovement;
@@ -81,6 +89,25 @@ public class PlayerAttack : MonoBehaviour
 
     public bool IsAttacking =>
         currentState != AttackState.Idle;
+
+    /*
+     * The swing itself (Windup) stays fully committed - that's the telegraph,
+     * and skipping it would make attacks unreadable/unfair. But once the hit
+     * has resolved and we're just sitting out Recovery endlag, a dodge should
+     * be able to flow straight out of it instead of waiting on a rigid timer -
+     * that wait is most of what reads as "locked into the attack".
+     */
+    public bool CanCancelIntoDodge =>
+        currentState == AttackState.Recovery;
+
+    /// <summary>Called by PlayerMovement when a dodge cancels an attack out of Recovery.</summary>
+    public void CancelForDodge()
+    {
+        if (currentState != AttackState.Recovery)
+            return;
+
+        ResetAttackState();
+    }
 
     public bool IsUsingHeavyAttack =>
         IsAttacking &&
@@ -165,6 +192,10 @@ public class PlayerAttack : MonoBehaviour
             return;
 
         TickAttackState();
+
+        if (InventoryUI.IsOpen)
+            return;
+
         ReadAttackInput();
     }
     private void ReadAttackInput()
@@ -393,12 +424,19 @@ public class PlayerAttack : MonoBehaviour
         if (currentAttackType ==
             AttackType.Heavy)
         {
+            CombatAudio.Play(heavySwingSfx, transform.position, swingVolume);
+
             Debug.Log(
                 "[PlayerAttack] Heavy attack animation started."
             );
         }
         else
         {
+            CombatAudio.Play(
+                currentComboStep >= 3 ? lightSwing3Sfx : lightSwing12Sfx,
+                transform.position, swingVolume
+            );
+
             Debug.Log(
                 $"[PlayerAttack] Light attack " +
                 $"{currentComboStep} animation started."
