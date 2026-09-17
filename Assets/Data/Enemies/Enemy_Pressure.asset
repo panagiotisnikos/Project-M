@@ -1,0 +1,42 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ad39886dad6dc3a45a9c1f2804dc8d35, type: 3}
+  m_Name: Enemy_Pressure
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyData
+  enemyName: Pressure Skirmisher
+  maxHealth: 22
+  moveSpeed: 9.5
+  rotationSpeed: 16
+  detectionRange: 11
+  losePlayerRange: 26
+  stoppingDistance: 2.2
+  attackHitRange: 2.8
+  attackDamage: 10
+  attackWindupDuration: 0.6
+  attackRecoveryDuration: 0.8
+  attacks:
+  - attackName: Jab
+    damage: 5
+    windupDuration: 0.28
+    recoveryDuration: 0.28
+    weight: 2
+  - attackName: Cross
+    damage: 8
+    windupDuration: 0.4
+    recoveryDuration: 0.4
+    weight: 1
+  staggerDurationMultiplier: 0.9
+  postAttackBehaviour: 0
+  retreatDistance: 4
+  retreatDuration: 1.2
+  decayedRecoveryMultiplier: 0.85
+  blossomRecoveryMultiplier: 1

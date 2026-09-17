@@ -32,6 +32,13 @@ public class ItemData : ScriptableObject
     public ShieldData shieldData;
     public ArmorData armorData;
 
+    [Header("World Pickup (optional)")]
+    [Tooltip("If set, ItemPickup spawns this prefab as the item's world visual " +
+             "instead of the shared generic loot-sack mesh - e.g. a distinct " +
+             "flask, ore chunk, or weapon silhouette. Leave empty to use the " +
+             "default shared visual (fine for most items).")]
+    public GameObject worldPrefab;
+
     [Header("Consumable buff (Consumable type)")]
     [Tooltip("Extra stamina-regen multiplier while the buff is active (0 = none).")]
     public float staminaRegenBonus = 0f;

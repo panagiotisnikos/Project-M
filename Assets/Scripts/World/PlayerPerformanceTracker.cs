@@ -36,6 +36,7 @@ public class PlayerPerformanceTracker : MonoBehaviour
     public float TimeAlive => timeAlive;
     public int ParriesLanded => parriesLanded;
     public int CleanDodges => cleanDodges;
+    public int BlocksHeld => blocksHeld;
     public int HitsTaken => hitsTaken;
 
     private void Update()
@@ -53,18 +54,21 @@ public class PlayerPerformanceTracker : MonoBehaviour
     {
         if (!isTracking) return;
         parriesLanded++;
+        WorldRegion.ActiveRegion?.RegisterParry();
     }
 
     public void RegisterCleanDodge()
     {
         if (!isTracking) return;
         cleanDodges++;
+        WorldRegion.ActiveRegion?.RegisterCleanDodge();
     }
 
     public void RegisterBlock()
     {
         if (!isTracking) return;
         blocksHeld++;
+        WorldRegion.ActiveRegion?.RegisterBlock();
     }
 
     public void RegisterDamageTaken(int damage)
@@ -72,11 +76,30 @@ public class PlayerPerformanceTracker : MonoBehaviour
         if (!isTracking) return;
         damageTaken += damage;
         hitsTaken++;
+        WorldRegion.ActiveRegion?.RegisterDamageTaken(damage);
     }
 
     public void StopTracking()
     {
         isTracking = false;
+    }
+
+    /// <summary>Inverse of StopTracking() - resumes counting after a respawn.</summary>
+    public void ResumeTracking()
+    {
+        isTracking = true;
+    }
+
+    /// <summary>Bulk-restore from a save file. Used only by GameSaveController on load.</summary>
+    public void RestoreStats(int kills, float aliveTime, int parries, int dodges, int blocks, int hits, int damage)
+    {
+        enemiesKilled = kills;
+        timeAlive = aliveTime;
+        parriesLanded = parries;
+        cleanDodges = dodges;
+        blocksHeld = blocks;
+        hitsTaken = hits;
+        damageTaken = damage;
     }
 
     /// <summary>

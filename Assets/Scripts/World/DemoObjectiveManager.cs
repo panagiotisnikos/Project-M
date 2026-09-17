@@ -20,6 +20,7 @@ public class DemoObjectiveManager : MonoBehaviour
             return;
 
         demoCompleted = true;
+        GameSession.ReportVictory();
 
         if (performanceTracker != null)
         {

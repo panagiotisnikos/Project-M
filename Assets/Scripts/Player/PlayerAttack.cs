@@ -193,7 +193,7 @@ public class PlayerAttack : MonoBehaviour
 
         TickAttackState();
 
-        if (InventoryUI.IsOpen)
+        if (InventoryUI.IsOpen || CraftingUI.IsOpen)
             return;
 
         ReadAttackInput();

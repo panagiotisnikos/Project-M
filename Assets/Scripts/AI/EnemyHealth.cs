@@ -4,8 +4,8 @@ using System.Collections;
 public class EnemyHealth : MonoBehaviour, IDamageable
 {
     [Header("Health")]
+    [Tooltip("Overwritten at Awake by enemyAI's EnemyData, if assigned.")]
     [SerializeField] private int maxHealth = 30;
-    [SerializeField] private EnemyAI.EnemyRole role;
 
     [Header("Hit Reaction")]
     [SerializeField] private float hitReactionDuration = 0.18f;
@@ -26,6 +26,10 @@ public class EnemyHealth : MonoBehaviour, IDamageable
     [Header("References")]
     [SerializeField] private PlayerPerformanceTracker performanceTracker;
     [SerializeField] private EnemyAI enemyAI;
+    [Tooltip("Optional - if present, its RewardTable/AdaptiveRewardTable is granted on death. " +
+             "The archetype's 'loot profile' lives entirely in whichever table this points at; " +
+             "not every enemy needs one (see LootDropper for the older per-entry-chance table).")]
+    [SerializeField] private RewardSource rewardSource;
 
     private Rigidbody rb;
     private Renderer enemyRenderer;
@@ -44,6 +48,11 @@ public class EnemyHealth : MonoBehaviour, IDamageable
         if (enemyAI == null)
         {
             enemyAI = GetComponent<EnemyAI>();
+        }
+
+        if (rewardSource == null)
+        {
+            rewardSource = GetComponent<RewardSource>();
         }
 
         if (enemyRenderer != null)
@@ -124,15 +133,9 @@ public class EnemyHealth : MonoBehaviour, IDamageable
 
     private void ConfigureHealth()
     {
-        switch (role)
+        if (enemyAI != null && enemyAI.Data != null)
         {
-            case EnemyAI.EnemyRole.Stalker:
-                maxHealth = 20;
-                break;
-
-            case EnemyAI.EnemyRole.Brute:
-                maxHealth = 60;
-                break;
+            maxHealth = enemyAI.Data.maxHealth;
         }
     }
 
@@ -220,6 +223,11 @@ public class EnemyHealth : MonoBehaviour, IDamageable
             deathVfx,
             transform.position + Vector3.up * 0.9f
         );
+
+        if (rewardSource != null)
+        {
+            rewardSource.Grant();
+        }
 
         Died?.Invoke();
 

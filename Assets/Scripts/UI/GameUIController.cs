@@ -103,6 +103,7 @@ private BossController bossController;
         IsPaused = false;
         Time.timeScale = 1f;
         gameEnded = false;
+        GameSession.Reset();
 
 
         if (pausePanel != null)
@@ -135,9 +136,7 @@ private BossController bossController;
     private void Update()
     {
         RefreshUI();
-        if (!gameEnded &&
-            demoObjectiveManager != null &&
-            demoObjectiveManager.IsDemoCompleted)
+        if (!gameEnded && GameSession.Won)
         {
             BeginCompletionSequence();
             return;
@@ -681,6 +680,58 @@ private IEnumerator ShowDeathScreenRoutine()
     Debug.Log(
         "[GameUI] Death screen shown."
     );
+}
+
+/// <summary>
+/// An in-place respawn (as opposed to RestartSlice's full scene reload) - not
+/// yet wired to a UI button. Hook a future "Respawn" control on the death
+/// panel to this. Places the player at the Refuge's respawn point (see
+/// RefugeZone) rather than leaving them wherever they died.
+/// </summary>
+public void RespawnPlayer()
+{
+    if (!gameEnded)
+        return;
+
+    gameEnded = false;
+    IsPaused = false;
+
+    if (deathRoutine != null)
+    {
+        StopCoroutine(deathRoutine);
+        deathRoutine = null;
+    }
+
+    if (deathPanel != null)
+    {
+        deathPanel.SetActive(false);
+    }
+
+    if (playerHealth != null)
+    {
+        playerHealth.Respawn();
+
+        if (RefugeZone.Main != null)
+        {
+            Vector3 pos = RefugeZone.Main.RespawnPoint.position;
+            var rb = playerHealth.GetComponent<Rigidbody>();
+
+            if (rb != null)
+            {
+                rb.position = pos;
+                rb.linearVelocity = Vector3.zero;
+            }
+
+            playerHealth.transform.position = pos;
+        }
+    }
+
+    Time.timeScale = 1f;
+
+    Cursor.lockState = CursorLockMode.Locked;
+    Cursor.visible = false;
+
+    Debug.Log("[GameUI] Player respawned.");
 }
 private void BeginCompletionSequence()
 {

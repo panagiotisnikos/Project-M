@@ -12,6 +12,11 @@ public class MainMenuController : MonoBehaviour
     [SerializeField] private GameObject creditsPanel;
     [SerializeField] private OptionsMenuUI optionsMenu;
 
+    /// <summary>True if a save exists to continue from. Not yet bound to any UI -
+    /// a future "Continue" control can gate its interactable/visibility on this
+    /// instead of always showing alongside "New Game".</summary>
+    public bool HasSaveToContinue => SaveSystem.HasSave;
+
     private void Start()
     {
         Time.timeScale = 1f;
@@ -22,6 +27,8 @@ public class MainMenuController : MonoBehaviour
         ShowMainMenu();
     }
 
+    /// <summary>Loads the gameplay scene. If a save exists, GameSaveController resumes it
+    /// automatically - this button doubles as "Continue" with no separate state to track.</summary>
     public void PlayGame()
     {
         if (string.IsNullOrWhiteSpace(gameplaySceneName))
@@ -34,6 +41,14 @@ public class MainMenuController : MonoBehaviour
         }
 
         SceneManager.LoadScene(gameplaySceneName);
+    }
+
+    /// <summary>Wipes any existing save before loading, for a deliberate fresh start.
+    /// Not yet wired to a button - hook this up when a "New Game" control is added.</summary>
+    public void NewGame()
+    {
+        SaveSystem.DeleteSave();
+        PlayGame();
     }
 
     public void ShowControls()

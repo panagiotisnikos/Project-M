@@ -4,12 +4,6 @@ using UnityEngine.AI;
 [RequireComponent(typeof(NavMeshAgent))]
 public class EnemyAI : MonoBehaviour, IStaggerable
 {
-    public enum EnemyRole
-    {
-        Stalker,
-        Brute
-    }
-
     private enum EnemyState
     {
         Idle,
@@ -17,6 +11,7 @@ public class EnemyAI : MonoBehaviour, IStaggerable
         Chase,
         AttackWindup,
         AttackRecovery,
+        Retreat,
         HitReact,
         Staggered
     }
@@ -25,8 +20,12 @@ public class EnemyAI : MonoBehaviour, IStaggerable
     [SerializeField] private Transform player;
     [SerializeField] private WorldAdaptationManager worldAdaptationManager;
 
-    [Header("Role")]
-    [SerializeField] private EnemyRole role;
+    [Header("Data")]
+    [Tooltip("Stat block for this enemy type. Overwrites the fields below at Awake if assigned.")]
+    [SerializeField] private EnemyData enemyData;
+
+    /// <summary>The stat-block asset this enemy was configured from, if any.</summary>
+    public EnemyData Data => enemyData;
 
     [Header("Movement")]
     [SerializeField] private float moveSpeed = 3f;
@@ -94,6 +93,11 @@ private float staggerEndTime;
     private EnemyState currentState = EnemyState.Idle;
     private float stateEndTime;
 
+    /// <summary>The attack chosen for the current windup, if EnemyData.attacks is
+    /// populated - null means "use the legacy single-attack fields" (attackDamage/
+    /// attackWindupDuration/attackRecoveryDuration), keeping old archetypes unchanged.</summary>
+    private EnemyAttackDefinition currentAttackChoice;
+
     private Color originalColor;
     private NavMeshAgent agent;
 
@@ -122,7 +126,7 @@ private float staggerEndTime;
             modelBaseScale = modelTransform.localScale;
         }
 
-        ConfigureByRole();
+        ApplyEnemyData();
 
         // NavMesh drives movement; we still face the player ourselves.
         agent.updateRotation = false;   // we face the player ourselves
@@ -261,7 +265,11 @@ private float staggerEndTime;
 
                 if (Time.time >= stateEndTime)
                 {
-                    if (distanceToPlayer <= stoppingDistance)
+                    if (enemyData != null && enemyData.postAttackBehaviour == PostAttackBehaviour.Retreat)
+                    {
+                        BeginRetreat();
+                    }
+                    else if (distanceToPlayer <= stoppingDistance)
                     {
                         BeginAttackWindup();
                     }
@@ -272,6 +280,16 @@ private float staggerEndTime;
                 }
 
                 break;
+
+            case EnemyState.Retreat:
+
+                if (Time.time >= stateEndTime)
+                {
+                    ChangeState(EnemyState.Chase);
+                }
+
+                break;
+
             case EnemyState.HitReact:
 
                 if (Time.time >= stateEndTime)
@@ -322,6 +340,11 @@ private float staggerEndTime;
 
                 StopMoving();
                 FacePlayer();
+                break;
+
+            case EnemyState.Retreat:
+
+                RetreatFromPlayer();
                 break;
 
             case EnemyState.Alerted:
@@ -462,12 +485,45 @@ private float staggerEndTime;
         }
     }
 
+    /// <summary>Weighted-random pick from EnemyData.attacks, or null if that array
+    /// is empty (the archetype uses the single legacy attack fields instead).</summary>
+    private EnemyAttackDefinition ChooseAttack()
+    {
+        if (enemyData == null || enemyData.attacks == null || enemyData.attacks.Length == 0)
+            return null;
+
+        if (enemyData.attacks.Length == 1)
+            return enemyData.attacks[0];
+
+        float totalWeight = 0f;
+        foreach (var atk in enemyData.attacks)
+            totalWeight += Mathf.Max(0.01f, atk.weight);
+
+        float roll = Random.value * totalWeight;
+
+        foreach (var atk in enemyData.attacks)
+        {
+            roll -= Mathf.Max(0.01f, atk.weight);
+            if (roll <= 0f)
+                return atk;
+        }
+
+        return enemyData.attacks[enemyData.attacks.Length - 1];
+    }
+
     private void BeginAttackWindup()
     {
         ChangeState(EnemyState.AttackWindup);
 
+        currentAttackChoice = ChooseAttack();
+
+        float baseWindup =
+            currentAttackChoice != null
+                ? currentAttackChoice.windupDuration
+                : attackWindupDuration;
+
         float adaptedWindupDuration =
-            attackWindupDuration * GetAttackCooldownModifier();
+            baseWindup * GetAttackCooldownModifier();
 
         animHitPending = false;
 
@@ -510,14 +566,17 @@ private float staggerEndTime;
         hitDirection.y = 0f;
         hitDirection.Normalize();
 
+        int damage = currentAttackChoice != null ? currentAttackChoice.damage : attackDamage;
+
         playerHealth.TakeDamage(
-            attackDamage,
+            damage,
             hitDirection,
             this
         );
 
         Debug.Log(
-            $"[{gameObject.name}] Attack hit for {attackDamage} damage."
+            $"[{gameObject.name}] {(currentAttackChoice != null ? currentAttackChoice.attackName : "Attack")} " +
+            $"hit for {damage} damage."
         );
     }
 
@@ -525,10 +584,45 @@ private float staggerEndTime;
     {
         ChangeState(EnemyState.AttackRecovery);
 
+        float baseRecovery =
+            currentAttackChoice != null
+                ? currentAttackChoice.recoveryDuration
+                : attackRecoveryDuration;
+
         float adaptedRecoveryDuration =
-            attackRecoveryDuration * GetAttackCooldownModifier();
+            baseRecovery * GetAttackCooldownModifier() * GetRegionRecoveryModifier();
 
         stateEndTime = Time.time + adaptedRecoveryDuration;
+
+        // "The clean opening right after the swing" - see EnemyData.postAttackVulnerabilityWindow.
+        if (enemyData != null && enemyData.postAttackVulnerabilityWindow > 0f)
+            vulnerableUntil = Time.time + enemyData.postAttackVulnerabilityWindow;
+    }
+
+    private float vulnerableUntil = -1f;
+
+    /// <summary>
+    /// Opt-in atmospheric flavor: an archetype can set decayedRecoveryMultiplier/
+    /// blossomRecoveryMultiplier away from 1 to feel a touch more relentless or
+    /// more sluggish depending on the region the player is currently standing in
+    /// (see WorldRegion). Defaults to 1 (no effect) - this deliberately does NOT
+    /// revive the old global difficulty dial (GetAttackCooldownModifier stays
+    /// pinned at 1); it only ever affects the archetypes that explicitly opt in.
+    /// </summary>
+    private float GetRegionRecoveryModifier()
+    {
+        if (enemyData == null)
+            return 1f;
+
+        RegionWorldState? state = WorldRegion.ActiveRegion?.CurrentState;
+
+        if (state == RegionWorldState.Decayed)
+            return enemyData.decayedRecoveryMultiplier;
+
+        if (state == RegionWorldState.Blossom)
+            return enemyData.blossomRecoveryMultiplier;
+
+        return 1f;
     }
 
     private Vector3 lastDestination = new Vector3(9999f, 9999f, 9999f);
@@ -564,6 +658,44 @@ private float staggerEndTime;
     private void FacePlayer()
     {
         RotateTowards(GetDirectionToPlayer());
+    }
+
+    /// <summary>PostAttackBehaviour.Retreat: back off to a point away from the
+    /// player instead of immediately re-engaging - creates a clean gap after an
+    /// attack instead of an unbroken chain of them (the DEFENSIVE archetype's
+    /// "spacing" identity). Keeps facing the player while backing away, same as
+    /// every other state - only the agent's destination is behind the enemy.</summary>
+    private void BeginRetreat()
+    {
+        ChangeState(EnemyState.Retreat);
+        stateEndTime = Time.time + (enemyData != null ? enemyData.retreatDuration : 1.2f);
+
+        if (agent == null || !agent.isOnNavMesh || player == null)
+            return;
+
+        float distance = enemyData != null ? enemyData.retreatDistance : 4f;
+        Vector3 awayDir = (transform.position - player.position);
+        awayDir.y = 0f;
+        awayDir = awayDir.sqrMagnitude > 0.0001f ? awayDir.normalized : -transform.forward;
+
+        Vector3 candidate = transform.position + awayDir * distance;
+
+        if (NavMesh.SamplePosition(candidate, out var hit, distance + 1f, NavMesh.AllAreas))
+        {
+            agent.isStopped = false;
+            agent.stoppingDistance = 0.1f;
+            agent.SetDestination(hit.position);
+        }
+    }
+
+    private void RetreatFromPlayer()
+    {
+        RotateTowards(GetDirectionToPlayer());
+
+        if (agent == null || !agent.isOnNavMesh)
+            return;
+
+        agent.speed = GetAdaptedMoveSpeed();
     }
 
     private void RotateTowards(Vector3 direction)
@@ -636,32 +768,20 @@ private float staggerEndTime;
         enemyRenderer.material.color =
             isActive ? staggerColor : originalColor;
     }
-    private void ConfigureByRole()
+    private void ApplyEnemyData()
     {
-        switch (role)
-        {
-            case EnemyRole.Stalker:
+        if (enemyData == null)
+            return;
 
-                moveSpeed = 9f;
-                detectionRange = 12f;
-                losePlayerRange = 28f;
-                attackDamage = 8;
-
-                attackWindupDuration = 0.65f;
-                attackRecoveryDuration = 0.6f;
-                break;
-
-            case EnemyRole.Brute:
-
-                moveSpeed = 2.4f;
-                detectionRange = 8f;
-                losePlayerRange = 24f;
-                attackDamage = 20;
-
-                attackWindupDuration = 1.15f;
-                attackRecoveryDuration = 1.1f;
-                break;
-        }
+        moveSpeed = enemyData.moveSpeed;
+        rotationSpeed = enemyData.rotationSpeed;
+        detectionRange = enemyData.detectionRange;
+        losePlayerRange = enemyData.losePlayerRange;
+        stoppingDistance = enemyData.stoppingDistance;
+        attackHitRange = enemyData.attackHitRange;
+        attackDamage = enemyData.attackDamage;
+        attackWindupDuration = enemyData.attackWindupDuration;
+        attackRecoveryDuration = enemyData.attackRecoveryDuration;
     }
 
     private float GetDistanceToPlayer()
@@ -739,19 +859,27 @@ private float staggerEndTime;
 
         currentState = EnemyState.Staggered;
 
+        float adaptedDuration =
+            duration * (enemyData != null ? enemyData.staggerDurationMultiplier : 1f);
+
+        bool caughtInOpening = enemyData != null && Time.time <= vulnerableUntil;
+        if (caughtInOpening)
+            adaptedDuration *= enemyData.postAttackVulnerabilityMultiplier;
+
         /*
         * Refresh the stagger duration even if the enemy
         * was already staggered.
         */
-        staggerEndTime = Time.time + duration;
+        staggerEndTime = Time.time + adaptedDuration;
 
         StopMoving();
         SetStaggerVisual(true);
-        Staggered?.Invoke(duration);
+        Staggered?.Invoke(adaptedDuration);
 
         Debug.Log(
             $"[{gameObject.name}] STAGGERED " +
-            $"for {duration:0.00}s."
+            $"for {adaptedDuration:0.00}s (base {duration:0.00}s)" +
+            $"{(caughtInOpening ? " - caught in the post-attack opening!" : "")}."
         );
     }
     public void SetWorldAdaptationManager(

@@ -12,6 +12,8 @@ public class Camp : MonoBehaviour
 
     [Header("Camp Info")]
     [SerializeField] private string campName = "Unnamed Camp";
+    [Tooltip("Stable id used by the save system. Defaults to the camp name if left blank.")]
+    [SerializeField] private string campId = "";
 
     [Header("Enemies")]
     [SerializeField] private List<EnemyHealth> enemies = new List<EnemyHealth>();
@@ -20,10 +22,21 @@ public class Camp : MonoBehaviour
     [SerializeField] private BossController boss;
     [SerializeField] private BossWeakeningReward reward;
 
+    [Header("Encounter Reward (optional)")]
+    [Tooltip("If assigned, clearing this camp grants whatever this RewardSource " +
+             "resolves - if it references an AdaptiveRewardTable, the current " +
+             "region's state (Balanced/Blossom/Decayed) picks the pool with no " +
+             "region-specific code here at all.")]
+    [SerializeField] private RewardSource rewardSource;
+
     private bool isCleared;
     private bool hasRegisteredEnemies;
 
     public bool IsCleared => isCleared;
+    public string CampId => string.IsNullOrEmpty(campId) ? campName : campId;
+
+    /// <summary>Fired once, the moment this camp is cleared (live combat OR a restored save).</summary>
+    public event System.Action Cleared;
 
     private void Awake()
     {
@@ -67,6 +80,30 @@ public class Camp : MonoBehaviour
         Debug.Log($"[Camp] {campName} cleared!");
 
         ApplyBossEffect();
+        GrantEncounterReward();
+        Cleared?.Invoke();
+    }
+
+    /// <summary>
+    /// Instantly mark this camp cleared from a save file - no combat, no re-triggering
+    /// the Cleared event (the save already reflects that this camp's reward was applied).
+    /// Any enemies still present (a fresh scene load always re-creates the scene-authored
+    /// ones) are removed so the player doesn't have to re-fight an already-cleared camp.
+    /// </summary>
+    public void RestoreCleared()
+    {
+        if (isCleared)
+            return;
+
+        foreach (var enemy in enemies)
+            if (enemy != null)
+                Destroy(enemy.gameObject);
+
+        enemies.Clear();
+        hasRegisteredEnemies = true;
+        isCleared = true;
+
+        ApplyBossEffect();
     }
 
     private void ApplyBossEffect()
@@ -91,5 +128,13 @@ public class Camp : MonoBehaviour
                 boss.DisableDecayAura();
                 break;
         }
+    }
+
+    private void GrantEncounterReward()
+    {
+        if (rewardSource == null)
+            return;
+
+        rewardSource.Grant();
     }
 }

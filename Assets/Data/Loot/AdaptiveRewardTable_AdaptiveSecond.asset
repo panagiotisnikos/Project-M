@@ -1,0 +1,17 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 547e207d704457745871d5040049ecc1, type: 3}
+  m_Name: AdaptiveRewardTable_AdaptiveSecond
+  m_EditorClassIdentifier: Assembly-CSharp::AdaptiveRewardTable
+  balanced: {fileID: 11400000, guid: 963dd56430b94854a9428d063ec96424, type: 2}
+  blossom: {fileID: 11400000, guid: 9b132d9bac4594c4dbb2babdc006f593, type: 2}
+  decayed: {fileID: 11400000, guid: 62dd75103c5a3594ba9a7c28759d5ac3, type: 2}

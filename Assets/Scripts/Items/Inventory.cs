@@ -114,6 +114,15 @@ public class Inventory
         return removed;
     }
 
+    /// <summary>Directly overwrites a slot's contents, bypassing stacking/merge rules.
+    /// Used by the save system to restore an exact slot layout.</summary>
+    public void SetSlot(int index, ItemData item, int count)
+    {
+        if (!Valid(index)) return;
+        slots[index] = (item == null || count <= 0) ? Slot.Empty : new Slot { item = item, count = count };
+        Changed?.Invoke();
+    }
+
     public bool RemoveAt(int index, int count)
     {
         if (index < 0 || index >= slots.Length || slots[index].IsEmpty) return false;

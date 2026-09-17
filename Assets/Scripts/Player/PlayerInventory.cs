@@ -81,6 +81,7 @@ public class PlayerInventory : MonoBehaviour
     {
         var pickup = other.GetComponentInParent<ItemPickup>();
         if (pickup == null || pickup.Item == null || !pickup.IsCollectable) return;
+        if (!pickup.TryClaimThisFrame()) return;
 
         int left = Inventory.TryAdd(pickup.Item, pickup.Count);
         int taken = pickup.Count - left;

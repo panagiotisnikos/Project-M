@@ -63,6 +63,16 @@ public class PlayerMovement : MonoBehaviour
     private float remainingAttackStepDistance;
     private float attackStepSpeed;
 
+    [Header("Hit Knockback")]
+    [Tooltip("Converts an incoming hit's force value into a short displacement, in meters per 1 unit of force.")]
+    [SerializeField] private float knockbackDistanceScale = 0.12f;
+    [SerializeField] private float knockbackMaxDistance = 0.9f;
+    [SerializeField] private float knockbackDuration = 0.18f;
+
+    private float remainingKnockbackDistance;
+    private float knockbackSpeed;
+    private Vector3 knockbackDirection;
+
     public bool IsBlocking { get; private set; }
     public bool IsDodging { get; private set; }
     public bool IsMoving =>
@@ -147,8 +157,8 @@ public class PlayerMovement : MonoBehaviour
             return;
         }
 
-        // Pack open: WASD still moves, but no blocking / dodging (mouse is on the UI).
-        if (InventoryUI.IsOpen)
+        // Pack/crafting open: WASD still moves, but no blocking / dodging (mouse is on the UI).
+        if (InventoryUI.IsOpen || CraftingUI.IsOpen)
         {
             IsBlocking = false;
             return;
@@ -432,6 +442,28 @@ public class PlayerMovement : MonoBehaviour
                 : distance;
     }
 
+    /// <summary>
+    /// Converts an incoming hit's impulse-style force into a short kinematic
+    /// displacement, consumed in Move() alongside normal movement - the same
+    /// pipeline QueueAttackStep already uses. A raw Rigidbody.AddForce impulse
+    /// gets silently overridden every FixedUpdate by Move()'s own MovePosition
+    /// call, so knockback has to ride this displacement queue instead of physics
+    /// to actually be felt.
+    /// </summary>
+    public void ApplyKnockback(Vector3 direction, float force)
+    {
+        direction.y = 0f;
+
+        if (direction.sqrMagnitude < 0.0001f || force <= 0f)
+            return;
+
+        float distance = Mathf.Min(force * knockbackDistanceScale, knockbackMaxDistance);
+
+        knockbackDirection = direction.normalized;
+        remainingKnockbackDistance = distance;
+        knockbackSpeed = knockbackDuration > 0f ? distance / knockbackDuration : distance;
+    }
+
     private ShieldData GetEquippedShield()
     {
         if (playerEquipment == null)
@@ -519,6 +551,22 @@ public class PlayerMovement : MonoBehaviour
                 stepThisFrame;
         }
     }
+
+        if (remainingKnockbackDistance > 0f)
+        {
+            float knockbackStepThisFrame =
+                Mathf.Min(
+                    remainingKnockbackDistance,
+                    knockbackSpeed * Time.fixedDeltaTime
+                );
+
+            totalDisplacement +=
+                knockbackDirection *
+                knockbackStepThisFrame;
+
+            remainingKnockbackDistance -=
+                knockbackStepThisFrame;
+        }
 
         if (totalDisplacement.sqrMagnitude <
             0.0001f)

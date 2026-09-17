@@ -6,6 +6,10 @@ public class CampSpawner : MonoBehaviour
     [SerializeField] private Camp camp;
     [SerializeField] private Camp requiredCamp;
     [SerializeField] private WorldAdaptationManager worldAdaptationManager;
+    [Tooltip("If assigned, this region's state drives composition instead of the " +
+             "global WorldAdaptationManager - the region-based adaptation path. " +
+             "Leave empty to keep the existing global-adaptation behaviour.")]
+    [SerializeField] private WorldRegion region;
 
     [Header("Enemy Prefabs")]
     [SerializeField] private GameObject stalkerPrefab;
@@ -17,6 +21,19 @@ public class CampSpawner : MonoBehaviour
 
     private bool hasSpawned;
     public bool HasSpawned { get; private set; }
+
+    /// <summary>
+    /// Tell this spawner its camp was already cleared in a save file - skip the
+    /// adaptive spawn entirely. Must be called BEFORE Camp.RestoreCleared(), or
+    /// this spawner would still populate fresh enemies and Camp.RefreshEnemies()
+    /// would flip the just-restored IsCleared back to false.
+    /// </summary>
+    public void MarkAlreadySpawned()
+    {
+        hasSpawned = true;
+        HasSpawned = true;
+    }
+
     public string LastGeneratedState { get; private set; } = "Not generated yet";
     public string LastComposition { get; private set; } = "Waiting for first camp";
     public float LastScore { get; private set; }
@@ -36,13 +53,40 @@ public class CampSpawner : MonoBehaviour
         hasSpawned = true;
         HasSpawned = true;
 
-        WorldAdaptationManager.WorldState state = WorldAdaptationManager.WorldState.Balanced;
-
-        if (worldAdaptationManager != null)
+        if (region != null)
         {
-            state = worldAdaptationManager.CurrentState;
+            LastGeneratedState = region.CurrentState.ToString();
+            SpawnForRegionState(region.CurrentState);
+            LastScore = region.CommittedScore;
+        }
+        else
+        {
+            WorldAdaptationManager.WorldState state = WorldAdaptationManager.WorldState.Balanced;
+
+            if (worldAdaptationManager != null)
+            {
+                state = worldAdaptationManager.CurrentState;
+            }
+
+            LastGeneratedState = state.ToString();
+            SpawnForGlobalState(state);
+
+            if (performanceTracker != null)
+            {
+                LastScore = performanceTracker.GetPerformanceScore();
+            }
         }
 
+        if (camp != null)
+        {
+            camp.RefreshEnemies();
+        }
+
+        Debug.Log($"[CampSpawner] Adaptive camp generated: {LastGeneratedState} | {LastComposition} | Score: {LastScore:0.0}");
+    }
+
+    private void SpawnForGlobalState(WorldAdaptationManager.WorldState state)
+    {
         switch (state)
         {
             case WorldAdaptationManager.WorldState.Stable:
@@ -64,20 +108,35 @@ public class CampSpawner : MonoBehaviour
                 SpawnEnemy(brutePrefab, 2);
                 break;
         }
+    }
 
-        LastGeneratedState = state.ToString();
-
-        if (performanceTracker != null)
+    /// <summary>Same three-tier shape as SpawnForGlobalState, re-keyed to the
+    /// region-adaptation enum: Blossom is the gentlest tier, Decayed the harshest -
+    /// matching the legacy Stable/Decaying polarity so the difficulty curve doesn't
+    /// change, only which system is driving it.</summary>
+    private void SpawnForRegionState(RegionWorldState state)
+    {
+        switch (state)
         {
-            LastScore = performanceTracker.GetPerformanceScore();
-        }
+            case RegionWorldState.Blossom:
+                LastComposition = "1 Stalker";
+                SpawnEnemy(stalkerPrefab, 0);
+                break;
 
-        if (camp != null)
-        {
-            camp.RefreshEnemies();
-        }
+            case RegionWorldState.Balanced:
+                LastComposition = "2 Stalkers + 1 Brute";
+                SpawnEnemy(stalkerPrefab, 0);
+                SpawnEnemy(brutePrefab, 1);
+                SpawnEnemy(stalkerPrefab, 2);
+                break;
 
-        Debug.Log($"[CampSpawner] Adaptive camp generated: {LastGeneratedState} | {LastComposition} | Score: {LastScore:0.0}");
+            case RegionWorldState.Decayed:
+                LastComposition = "1 Stalker + 2 Brutes";
+                SpawnEnemy(stalkerPrefab, 0);
+                SpawnEnemy(brutePrefab, 1);
+                SpawnEnemy(brutePrefab, 2);
+                break;
+        }
     }
 
     private void SpawnEnemy(GameObject prefab, int spawnPointIndex)

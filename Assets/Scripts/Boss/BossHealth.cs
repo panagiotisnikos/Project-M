@@ -120,6 +120,33 @@ public class BossHealth : MonoBehaviour, IDamageable
         isInvulnerable = value;
     }
 
+    /// <summary>
+    /// Instantly mark the boss defeated from a save file - no death VFX/camera shake
+    /// (there's nothing to react to, the fight already happened in a prior session).
+    /// Still runs the same cleanup as a live death so the boss stays inert and the
+    /// slice's completion state is consistent.
+    /// </summary>
+    public void RestoreDefeated()
+    {
+        if (isDead)
+            return;
+
+        isDead = true;
+        currentHealth = 0;
+
+        if (bossCombat != null)
+        {
+            bossCombat.OnDefeated();
+        }
+
+        if (demoObjectiveManager != null)
+        {
+            demoObjectiveManager.RegisterBossDefeated();
+        }
+
+        gameObject.SetActive(false);
+    }
+
     /// <summary>Restore a fraction (0..1) of max health. Used by the boss heal ability.</summary>
     public void Heal(float fractionOfMax)
     {

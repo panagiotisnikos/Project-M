@@ -11,23 +11,32 @@ public class PlayerHealth : MonoBehaviour
     [Header("Feel / VFX")]
     [SerializeField] private ParticleSystem parryVfx;
     [SerializeField] private ParticleSystem hurtVfx;
+    [Tooltip("Plays on every successful block, including a full (0-damage) block - " +
+             "previously a full block gave no feedback at all beyond a console log.")]
+    [SerializeField] private ParticleSystem blockVfx;
     [SerializeField] private float parryTrauma = 0.4f;
     [SerializeField] private float hurtTrauma = 0.3f;
+    [SerializeField] private float blockTrauma = 0.18f;
 
     [Header("Audio")]
     [SerializeField] private AudioClip hurtGruntSfx;
     [Range(0f, 1f)] [SerializeField] private float hurtGruntVolume = 0.5f;
+    [SerializeField] private AudioClip blockSfx;
+    [Range(0f, 1f)] [SerializeField] private float blockSfxVolume = 0.5f;
+    [Tooltip("Plays when a block is attempted but fails for lack of stamina, so a hit " +
+             "that passes straight through a held guard reads differently from a clean hit.")]
+    [SerializeField] private AudioClip guardBreakSfx;
+    [Range(0f, 1f)] [SerializeField] private float guardBreakVolume = 0.55f;
 
     [Header("References")]
     [SerializeField] private PlayerPerformanceTracker performanceTracker;
     [SerializeField] private PlayerMovement playerMovement;
     [SerializeField] private PlayerEquipment playerEquipment;
     [SerializeField] private PlayerStamina playerStamina;
+    [SerializeField] private HearthEmber hearthEmber;
 
     private int currentHealth;
     private bool isDead;
-
-    private Rigidbody rb;
 
     public bool IsDead => isDead;
     public int CurrentHealth => currentHealth;
@@ -40,10 +49,15 @@ public class PlayerHealth : MonoBehaviour
         currentHealth = Mathf.Min(maxHealth, currentHealth + amount);
     }
 
+    /// <summary>Directly set health from a save file - no death check, no VFX/knockback,
+    /// this is a silent state restore, not combat damage.</summary>
+    public void RestoreHealth(int amount)
+    {
+        currentHealth = Mathf.Clamp(amount, 1, maxHealth);
+    }
+
     private void Awake()
     {
-        rb = GetComponent<Rigidbody>();
-
         if (playerMovement == null)
         {
             playerMovement =
@@ -66,6 +80,11 @@ public class PlayerHealth : MonoBehaviour
             Debug.LogWarning(
                 "[PlayerHealth] PlayerStamina component is missing."
             );
+        }
+
+        if (hearthEmber == null)
+        {
+            hearthEmber = GetComponent<HearthEmber>();
         }
 
         currentHealth = maxHealth;
@@ -177,6 +196,26 @@ public class PlayerHealth : MonoBehaviour
                 performanceTracker.RegisterBlock();
             }
 
+            /*
+             * Fires on every successful block, even a full (0-damage) one -
+             * previously the only feedback below this point was gated on
+             * finalDamage > 0, so a shield that fully absorbs a hit (e.g. the
+             * Round Shield's 0 BlockedDamageMultiplier) gave no VFX/audio/shake
+             * at all, just a console log.
+             */
+            CombatVfx.Play(
+                blockVfx,
+                transform.position + Vector3.up + transform.forward * 0.5f,
+                -transform.forward
+            );
+
+            CombatAudio.Play(blockSfx, transform.position, blockSfxVolume);
+
+            if (CameraShake.Instance != null)
+            {
+                CameraShake.Instance.AddTrauma(blockTrauma);
+            }
+
             Debug.Log(
                 $"[PlayerHealth] BLOCK with " +
                 $"{shield.ShieldName}! " +
@@ -189,9 +228,13 @@ public class PlayerHealth : MonoBehaviour
         else
         {
             /*
-             * No guard-break state yet.
-             * The attack simply passes through the guard.
+             * No guard-break state yet - the attack simply passes through the
+             * guard for full damage (handled by the normal hurt-feedback path
+             * below). This SFX is the only thing that distinguishes "you tried
+             * to block but didn't have the stamina" from a plain unblocked hit.
              */
+            CombatAudio.Play(guardBreakSfx, transform.position, guardBreakVolume);
+
             Debug.Log(
                 $"[PlayerHealth] BLOCK FAILED! " +
                 $"Not enough stamina. Required: " +
@@ -243,7 +286,14 @@ public class PlayerHealth : MonoBehaviour
 
     if (currentHealth <= 0)
     {
-        Die();
+        if (hearthEmber != null && hearthEmber.TryConsume())
+        {
+            SurviveOnEmber();
+        }
+        else
+        {
+            Die();
+        }
     }
 }
 
@@ -349,6 +399,22 @@ public class PlayerHealth : MonoBehaviour
             amount
         );
     }
+    /// <summary>
+    /// The Refuge's one lightweight return-home benefit paying off: a banked
+    /// HearthEmber charge (see RefugeZone/HearthEmber) spends itself to stop a
+    /// killing blow from ending the run, leaving a small sliver of health
+    /// instead of zero. A second chance, not a free heal - the player still
+    /// has to fight or flee from there.
+    /// </summary>
+    private void SurviveOnEmber()
+    {
+        currentHealth = Mathf.Max(1, Mathf.RoundToInt(maxHealth * 0.3f));
+
+        Debug.Log(
+            "[PlayerHealth] The hearth ember spared you from death!"
+        );
+    }
+
     private void Die()
     {
         if (isDead)
@@ -366,12 +432,29 @@ public class PlayerHealth : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// The inverse of Die() - foundation for an in-place respawn (see
+    /// GameUIController.RespawnPlayer()). Restores health (full, unless a
+    /// specific amount is given) and resumes performance tracking.
+    /// </summary>
+    public void Respawn(int health = -1)
+    {
+        isDead = false;
+        currentHealth = health > 0 ? Mathf.Min(health, maxHealth) : maxHealth;
+
+        if (performanceTracker != null)
+        {
+            performanceTracker.ResumeTracking();
+        }
+
+        Debug.Log("[PlayerHealth] Player respawned.");
+    }
+
     private void ApplyKnockback(
         Vector3 hitDirection,
         float force)
     {
-        if (rb == null ||
-            force <= 0f)
+        if (force <= 0f)
         {
             return;
         }
@@ -386,9 +469,14 @@ public class PlayerHealth : MonoBehaviour
 
         hitDirection.Normalize();
 
-        rb.AddForce(
-            hitDirection * force,
-            ForceMode.Impulse
-        );
+        /*
+         * A raw Rigidbody impulse gets silently overridden every FixedUpdate by
+         * PlayerMovement.Move()'s own MovePosition call, so knockback rides the
+         * same kinematic displacement queue attack-steps use instead of physics.
+         */
+        if (playerMovement != null)
+        {
+            playerMovement.ApplyKnockback(hitDirection, force);
+        }
     }
 }

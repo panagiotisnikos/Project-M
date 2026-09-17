@@ -73,9 +73,16 @@ public class MusicManager : MonoBehaviour
 
         bool playerDead = playerHealth != null && playerHealth.IsDead;
 
+        // Inside the Refuge the music settles to its quiet floor and stays there -
+        // one more small signal (with lighting/fence/fire) that this place is
+        // calm, not just another patch of ground the swell cycle ignores.
+        bool inRefuge = RefugeZone.Main != null && RefugeZone.Main.IsPlayerInside;
+        if (inRefuge) swelling = false;
+
         // The ambient swell/quiet cycle only runs during ordinary exploration -
-        // a boss fight or death holds/overrides it rather than ticking underneath.
-        if (!bossActive && !playerDead && Time.time >= phaseEndTime)
+        // a boss fight, death, or the refuge holds/overrides it rather than
+        // ticking underneath.
+        if (!bossActive && !playerDead && !inRefuge && Time.time >= phaseEndTime)
         {
             swelling = !swelling;
             phaseEndTime = Time.time + (swelling

@@ -162,7 +162,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EnemyAI
   player: {fileID: 0}
   worldAdaptationManager: {fileID: 0}
-  role: 0
+  enemyData: {fileID: 11400000, guid: 02f3c2e80d78b2e4a94418ddab3261d2, type: 2}
   moveSpeed: 4.5
   rotationSpeed: 12
   detectionRange: 12
@@ -194,7 +194,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyHealth
   maxHealth: 30
-  role: 0
   hitReactionDuration: 0.18
   hitFlashDuration: 0.1
   hitFlashColor: {r: 1, g: 0, b: 0, a: 1}
