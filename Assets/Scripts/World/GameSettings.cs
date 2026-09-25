@@ -136,6 +136,10 @@ public static class GameSettings
     public static void ApplyVideo()
     {
         QualitySettings.SetQualityLevel(qualityLevel, true);
+
+        // In a browser the page owns the canvas size, fullscreen needs a user gesture and
+        // frame pacing follows requestAnimationFrame - forcing any of them at boot misbehaves.
+#if !UNITY_WEBGL
         QualitySettings.vSyncCount = vSyncEnabled ? 1 : 0;
 
         var resolutions = Screen.resolutions;
@@ -148,5 +152,6 @@ public static class GameSettings
         {
             Screen.fullScreen = fullscreen;
         }
+#endif
     }
 }

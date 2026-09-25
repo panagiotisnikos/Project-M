@@ -152,6 +152,11 @@ private BossController bossController;
         if (gameEnded)
             return;
 
+#if UNITY_WEBGL && !UNITY_EDITOR
+        if (WatchBrowserPointerLock())
+            return;
+#endif
+
         if (Input.GetKeyDown(KeyBindings.Get(GameAction.Pause)))
         {
             if (IsPaused)
@@ -171,6 +176,40 @@ private BossController bossController;
             ToggleControlsOverlay();
         }
     }
+
+#if UNITY_WEBGL && !UNITY_EDITOR
+    private bool sawPointerLock;
+
+    /// <summary>
+    /// In a browser, Esc is consumed to release the mouse (pointer lock) and never reaches the
+    /// game, so the pause key would silently do nothing. Instead: if the cursor was locked during
+    /// play and the browser takes it back, open the pause menu - the same outcome as pressing Esc
+    /// on desktop. Only armed after a lock has actually been seen (the browser needs a click
+    /// before the first lock), and reset whenever a menu legitimately frees the cursor.
+    /// </summary>
+    private bool WatchBrowserPointerLock()
+    {
+        bool menuOpen = IsPaused || InventoryUI.IsOpen || CraftingUI.IsOpen || ProgressionUI.IsOpen;
+        if (menuOpen)
+        {
+            sawPointerLock = false;
+            return false;
+        }
+
+        if (Cursor.lockState == CursorLockMode.Locked)
+        {
+            sawPointerLock = true;
+            return false;
+        }
+
+        if (!sawPointerLock)
+            return false;
+
+        sawPointerLock = false;
+        PauseGame();
+        return true;
+    }
+#endif
 
     private void FindMissingReferences()
     {

@@ -222,8 +222,12 @@ public class OptionsMenuUI : MonoBehaviour
     {
         AddSectionHeader(content, "VIDEO");
 
+        // Fullscreen, Resolution and VSync belong to the browser page on the web build
+        // (the page has its own fullscreen button) - only Quality is offered there.
+#if !UNITY_WEBGL
         fullscreenValueText = AddToggleRow(content, "Fullscreen", GameSettings.Fullscreen,
             v => GameSettings.SetFullscreen(v));
+#endif
 
         qualityIndex = Mathf.Clamp(GameSettings.QualityLevel, 0, Mathf.Max(0, QualitySettings.names.Length - 1));
         qualityValueText = AddCyclerRow(content, "Quality", QualitySettings.names[qualityIndex],
@@ -235,6 +239,7 @@ public class OptionsMenuUI : MonoBehaviour
                 qualityValueText.text = QualitySettings.names[qualityIndex];
             });
 
+#if !UNITY_WEBGL
         resolutionCyclerIndex = FindResolutionCyclerIndex();
         resolutionValueText = AddCyclerRow(content, "Resolution", ResolutionLabel(resolutionCyclerIndex),
             dir =>
@@ -247,6 +252,7 @@ public class OptionsMenuUI : MonoBehaviour
 
         vSyncValueText = AddToggleRow(content, "VSync", GameSettings.VSyncEnabled,
             v => GameSettings.SetVSyncEnabled(v));
+#endif
     }
 
     private void BuildControlsSection(Transform content)
