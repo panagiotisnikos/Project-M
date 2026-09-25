@@ -1,6 +1,7 @@
 using System.Collections;
 using TMPro;
 using UnityEngine;
+using UnityEngine.Events;
 using UnityEngine.UI;
 
 /// <summary>
@@ -13,7 +14,6 @@ using UnityEngine.UI;
 public class LootChest : MonoBehaviour
 {
     [Header("Interact")]
-    [SerializeField] private KeyCode interactKey = KeyCode.E;
     [SerializeField] private float interactRange = 2.2f;
     [SerializeField] private Transform player;
 
@@ -21,6 +21,16 @@ public class LootChest : MonoBehaviour
     [SerializeField] private Transform lid;
     [SerializeField] private float lidOpenAngle = -100f;
     [SerializeField] private float lidOpenDuration = 0.45f;
+
+    [Header("Audio")]
+    [SerializeField] private AudioClip openSfx;
+    [Range(0f, 1f)] [SerializeField] private float openVolume = 0.5f;
+
+    [Header("Feedback Hook (optional - e.g. wire to a PointOfInterest's Complete())")]
+    [SerializeField] private UnityEvent onOpened = new UnityEvent();
+
+    /// <summary>Fired the moment this chest is opened - the code-side mirror of onOpened.</summary>
+    public event System.Action Opened;
 
     private LootDropper dropper;
     private bool isOpen;
@@ -54,7 +64,7 @@ public class LootChest : MonoBehaviour
         playerInRange = dist <= interactRange;
         SetPromptVisible(playerInRange && !GameUIController.IsPaused && !InventoryUI.IsOpen);
 
-        if (playerInRange && !GameUIController.IsPaused && !InventoryUI.IsOpen && Input.GetKeyDown(interactKey))
+        if (playerInRange && !GameUIController.IsPaused && !InventoryUI.IsOpen && Input.GetKeyDown(KeyBindings.Get(GameAction.Interact)))
         {
             Open();
         }
@@ -67,6 +77,11 @@ public class LootChest : MonoBehaviour
 
         SetPromptVisible(false);
         dropper.Drop();
+
+        CombatAudio.Play(openSfx, transform.position, openVolume);
+
+        onOpened?.Invoke();
+        Opened?.Invoke();
 
         if (lid != null)
             StartCoroutine(OpenLidRoutine());
@@ -105,10 +120,9 @@ public class LootChest : MonoBehaviour
         rect.sizeDelta = new Vector2(420f, 50f);
 
         promptText = textGO.AddComponent<TextMeshProUGUI>();
-        promptText.text = "Press E to open";
         promptText.alignment = TextAlignmentOptions.Center;
         promptText.fontSize = 30f;
-        promptText.color = new Color(0.95f, 0.66f, 0.28f); // amber, matches the UI accent
+        promptText.color = UIPalette.Teal;
         promptText.fontStyle = FontStyles.Bold;
 
         var shadow = textGO.AddComponent<Shadow>();
@@ -119,6 +133,23 @@ public class LootChest : MonoBehaviour
         promptGroup.alpha = 0f;
         promptGroup.blocksRaycasts = false;
         promptGroup.interactable = false;
+
+        RefreshPromptText();
+    }
+
+    private void OnEnable()
+    {
+        KeyBindings.Changed += RefreshPromptText;
+    }
+
+    private void OnDisable()
+    {
+        KeyBindings.Changed -= RefreshPromptText;
+    }
+
+    private void RefreshPromptText()
+    {
+        if (promptText != null) promptText.text = $"Press {KeyBindings.Get(GameAction.Interact)} to open";
     }
 
     private void SetPromptVisible(bool visible)
@@ -129,7 +160,7 @@ public class LootChest : MonoBehaviour
 
     private void OnDrawGizmosSelected()
     {
-        Gizmos.color = new Color(0.95f, 0.66f, 0.28f, 0.5f);
+        Gizmos.color = new Color(UIPalette.Teal.r, UIPalette.Teal.g, UIPalette.Teal.b, 0.5f);
         Gizmos.DrawWireSphere(transform.position, interactRange);
     }
 }

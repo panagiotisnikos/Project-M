@@ -1,0 +1,447 @@
+<!doctype html>
+<title>Procedural World Architecture</title>
+<style>
+  :root{
+    --paper:#f5f1e6; --paper-raised:#fbf8f1; --ink:#2b2417; --ink-dim:#6e6553;
+    --rule:rgba(43,36,23,0.14); --accent:#9c7a3c; --accent-ink:#5c4520;
+    --code-bg:#eee7d6; --code-ink:#40331a;
+    --balanced:#8a8577; --blossom:#4f8a56; --decayed:#6f5f78;
+    --balanced-bg:#e9e6dd; --blossom-bg:#e3ede3; --decayed-bg:#e7e2ea;
+    --risk-bg:#f3e6e0; --risk-ink:#7a3f24; --risk-rule:#c98a5e;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --paper:#191510; --paper-raised:#221c14; --ink:#e9e0cd; --ink-dim:#a99d84;
+      --rule:rgba(233,224,205,0.14); --accent:#d3ab5f; --accent-ink:#e9c988;
+      --code-bg:#241d13; --code-ink:#e4d3a8;
+      --balanced:#a8a291; --blossom:#7cb583; --decayed:#a992b5;
+      --balanced-bg:#26221a; --blossom-bg:#1d2820; --decayed-bg:#251f2b;
+      --risk-bg:#2b1c14; --risk-ink:#e0a37b; --risk-rule:#8a5433;
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#191510; --paper-raised:#221c14; --ink:#e9e0cd; --ink-dim:#a99d84;
+    --rule:rgba(233,224,205,0.14); --accent:#d3ab5f; --accent-ink:#e9c988;
+    --code-bg:#241d13; --code-ink:#e4d3a8;
+    --balanced:#a8a291; --blossom:#7cb583; --decayed:#a992b5;
+    --balanced-bg:#26221a; --blossom-bg:#1d2820; --decayed-bg:#251f2b;
+    --risk-bg:#2b1c14; --risk-ink:#e0a37b; --risk-rule:#8a5433;
+  }
+
+  * { box-sizing: border-box; }
+  body{
+    background:var(--paper); color:var(--ink);
+    font-family:"IBM Plex Sans", system-ui, sans-serif;
+    font-size:16px; line-height:1.65; margin:0;
+    padding:0 16px; padding-block:0;
+  }
+  h1,h2,h3{ font-family:"Fraunces", Georgia, serif; text-wrap:balance; color:var(--ink); }
+  a{ color:var(--accent-ink); }
+  code, pre, .mono{ font-family:"IBM Plex Mono", ui-monospace, monospace; }
+
+  .shell{ max-width:1180px; margin:0 auto; display:flex; gap:40px; align-items:flex-start; }
+  nav.toc{
+    position:sticky; top:24px; width:236px; flex:none;
+    padding:20px 0 40px; max-height:calc(100vh - 48px); overflow-y:auto;
+  }
+  nav.toc .brand{ font-family:"Fraunces",serif; font-size:1.05rem; margin-bottom:4px; }
+  nav.toc .sub{ color:var(--ink-dim); font-size:.78rem; margin-bottom:18px; }
+  nav.toc a{
+    display:block; text-decoration:none; color:var(--ink-dim);
+    font-size:.86rem; padding:5px 0 5px 14px; border-left:2px solid var(--rule);
+  }
+  nav.toc a:hover{ color:var(--accent-ink); border-left-color:var(--accent); }
+  nav.toc .phase-link{ font-size:.8rem; padding-left:26px; }
+
+  main{ flex:1; min-width:0; padding:56px 0 100px; }
+  header.hero{ margin-bottom:56px; }
+  header.hero .eyebrow{
+    font-family:"IBM Plex Mono",monospace; font-size:.78rem; letter-spacing:.12em;
+    text-transform:uppercase; color:var(--accent-ink);
+  }
+  header.hero h1{ font-size:2.6rem; margin:.3em 0 .2em; line-height:1.08; }
+  header.hero p.dek{ font-size:1.08rem; color:var(--ink-dim); max-width:640px; margin:0; }
+  header.hero .meta{ margin-top:22px; font-size:.82rem; color:var(--ink-dim); display:flex; gap:18px; flex-wrap:wrap; }
+  header.hero .meta b{ color:var(--ink); }
+
+  section{ margin-bottom:64px; scroll-margin-top:24px; }
+  section > .num{
+    display:inline-flex; align-items:center; justify-content:center;
+    width:30px; height:30px; border:1.5px solid var(--accent); border-radius:50%;
+    font-family:"IBM Plex Mono",monospace; font-size:.82rem; color:var(--accent-ink);
+    margin-right:10px; flex:none;
+  }
+  section h2{
+    font-size:1.55rem; display:flex; align-items:center; gap:0;
+    border-bottom:1px solid var(--rule); padding-bottom:14px; margin-bottom:22px;
+  }
+  section h3{ font-size:1.12rem; margin:1.6em 0 .5em; }
+  p{ max-width:72ch; }
+  ul,ol{ max-width:72ch; padding-left:1.3em; }
+  li{ margin:.3em 0; }
+
+  .lede{ font-size:1.03rem; color:var(--ink-dim); max-width:70ch; }
+
+  .tag{
+    display:inline-block; font-family:"IBM Plex Mono",monospace; font-size:.72rem;
+    padding:1px 7px; border-radius:4px; font-weight:600; letter-spacing:.02em;
+  }
+  .tag.balanced{ color:var(--balanced); background:var(--balanced-bg); }
+  .tag.blossom{ color:var(--blossom); background:var(--blossom-bg); }
+  .tag.decayed{ color:var(--decayed); background:var(--decayed-bg); }
+
+  .card{
+    background:var(--paper-raised); border:1px solid var(--rule); border-radius:10px;
+    padding:20px 24px; margin:18px 0;
+  }
+  .card h4{ margin:0 0 8px; font-size:.95rem; font-family:"IBM Plex Sans"; font-weight:700; }
+
+  .split{ display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+  @media (max-width:720px){ .split{ grid-template-columns:1fr; } }
+
+  pre{
+    background:var(--code-bg); color:var(--code-ink); border:1px solid var(--rule);
+    border-radius:8px; padding:16px 18px; overflow-x:auto; font-size:.84rem; line-height:1.55;
+  }
+  code.inline{ background:var(--code-bg); color:var(--code-ink); padding:1px 5px; border-radius:4px; font-size:.87em; }
+
+  table{ border-collapse:collapse; width:100%; max-width:76ch; font-size:.9rem; margin:1em 0; }
+  th,td{ text-align:left; padding:8px 12px; border-bottom:1px solid var(--rule); vertical-align:top; }
+  th{ font-family:"IBM Plex Mono",monospace; font-size:.72rem; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-dim); }
+
+  .risk{
+    background:var(--risk-bg); border-left:3px solid var(--risk-rule); border-radius:0 8px 8px 0;
+    padding:14px 18px; margin:14px 0;
+  }
+  .risk h4{ margin:0 0 4px; color:var(--risk-ink); font-size:.9rem; }
+  .risk p{ margin:0; font-size:.92rem; }
+
+  .phase{
+    border:1px solid var(--rule); border-radius:10px; padding:20px 24px; margin:16px 0;
+    background:var(--paper-raised); scroll-margin-top:24px;
+  }
+  .phase .ph-head{ display:flex; align-items:baseline; gap:10px; margin-bottom:6px; }
+  .phase .ph-num{ font-family:"IBM Plex Mono",monospace; color:var(--accent-ink); font-size:.85rem; }
+  .phase h3{ margin:0; font-size:1.05rem; }
+  .phase .test{ margin-top:10px; padding-top:10px; border-top:1px dashed var(--rule); font-size:.88rem; }
+  .phase .test b{ font-family:"IBM Plex Mono",monospace; font-size:.72rem; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-dim); }
+
+  .existing{ color:var(--accent-ink); font-weight:600; }
+  .kicker{ font-family:"IBM Plex Mono",monospace; font-size:.72rem; text-transform:uppercase; letter-spacing:.08em; color:var(--ink-dim); margin-bottom:6px; }
+
+  footer{ border-top:1px solid var(--rule); padding:28px 0 60px; color:var(--ink-dim); font-size:.85rem; }
+
+  @media (max-width:900px){
+    .shell{ flex-direction:column; }
+    nav.toc{ position:static; width:100%; max-height:none; padding:16px 0; }
+    nav.toc a{ display:inline-block; margin-right:14px; padding:4px 0; border-left:none; border-bottom:2px solid var(--rule); }
+  }
+</style>
+
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+
+<div class="shell">
+  <nav class="toc">
+    <div class="brand">Project M</div>
+    <div class="sub">World Generation Architecture</div>
+    <a href="#principle">Core Separation</a>
+    <a href="#architecture">1 · Proposed Architecture</a>
+    <a href="#datamodel">2 · World Data Model</a>
+    <a href="#pipeline">3 · Generation Pipeline</a>
+    <a href="#adaptation">4 · Adaptation Integration</a>
+    <a href="#persistence">5 · Save / Persistence</a>
+    <a href="#authoring">6 · Authoring Workflow</a>
+    <a href="#risks">7 · Risks</a>
+    <a href="#mvp">8 · MVP Plan &amp; Phases</a>
+    <a href="#phase0" class="phase-link">Phase 0 — Seed plumbing</a>
+    <a href="#phase1" class="phase-link">Phase 1 — Flat cells</a>
+    <a href="#phase2" class="phase-link">Phase 2 — Terrain + biome</a>
+    <a href="#phase3" class="phase-link">Phase 3 — Scatter placement</a>
+    <a href="#phase4" class="phase-link">Phase 4 — Adaptive wiring</a>
+    <a href="#phase5" class="phase-link">Phase 5 — Landmarks</a>
+    <a href="#phase6" class="phase-link">Phase 6 — Save/load</a>
+    <a href="#phase7" class="phase-link">Phase 7 — NavMesh streaming</a>
+    <a href="#prototype">Prototype_01's Future</a>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <div class="eyebrow">Design Only — Not Implemented</div>
+      <h1>Procedural World Architecture</h1>
+      <p class="dek">A generation system inspired by Valheim's strengths, sized for one solo developer: procedural terrain and placement composing hand-authored modules, with physical world generation kept strictly separate from <span class="tag balanced">Balanced</span> <span class="tag blossom">Blossom</span> <span class="tag decayed">Decayed</span> adaptive state.</p>
+      <div class="meta">
+        <span><b>Status</b> Proposal</span>
+        <span><b>Scope</b> Architecture + phased plan, zero code changes</span>
+        <span><b>Grounded in</b> the live Assets/Scripts world/adaptation/save stack as of this pass</span>
+      </div>
+    </header>
+
+    <section id="principle">
+      <h2><span class="num">·</span>Core Separation</h2>
+      <p class="lede">The requested split already exists as a seam in the codebase — it just isn't drawn around a generator yet.</p>
+      <div class="split">
+        <div class="card">
+          <h4>GeneratedRegion <span class="mono" style="font-weight:400;color:var(--ink-dim)">— new</span></h4>
+          <p style="margin:0">Physical biome, terrain height, and the list of what got placed where. Computed once per cell, locked in on first visit, never re-derived once a save exists for it.</p>
+        </div>
+        <div class="card">
+          <h4>AdaptiveRegionState <span class="mono existing" style="font-weight:400">— already built</span></h4>
+          <p style="margin:0">Today's <code class="inline">WorldRegion</code> + <code class="inline">RegionAdaptationProfile</code>. Committed score, <span class="tag balanced">Balanced</span>/<span class="tag blossom">Blossom</span>/<span class="tag decayed">Decayed</span> state, a <code class="inline">StateChanged</code> event every downstream system already listens to generically.</p>
+        </div>
+      </div>
+      <p>The same generated cell changes adaptive state without regenerating: a <code class="inline">WorldRegion</code> component gets attached to a loaded cell's trigger volume, exactly like it's hand-attached to <code class="inline">Camp_AdaptiveSecond</code> today. Nothing about <code class="inline">WorldRegion</code>, <code class="inline">AdaptiveEncounterComposition</code>, <code class="inline">AdaptiveRewardTable</code>, <code class="inline">EnemyVariantData</code>, or <code class="inline">RegionVisualAdapter</code> needs to change — they already resolve against <code class="inline">RegionWorldState</code> with zero region-specific code. World generation is additive work sitting entirely on the physical side.</p>
+    </section>
+
+    <section id="architecture">
+      <h2><span class="num">1</span>Proposed Architecture</h2>
+      <p class="lede">Layers, top to bottom. Everything below "World Partitioning" reuses an existing system unchanged.</p>
+      <ol>
+        <li><b>World Seed &amp; Config</b> — one <code class="inline">long</code> seed, expanded into independent per-concern sub-seeds (terrain, biome, POI placement, resources, encounters) via a stable hash, so tuning one stage never reshuffles another. A single shared seed cascading across unrelated systems is a documented Valheim pain point across engine updates — designing the sub-stream split in from day one avoids inheriting it.</li>
+        <li><b>World Partitioning</b> — a finite grid of cells (not infinite streaming; matches the project's current ~200-unit scale). Cell size tuned to comfortably hold one camp/POI cluster plus walkable buffer — the mini-dungeon's own ~100m span is a good reference point.</li>
+        <li><b>Terrain Generation</b> — see below. Recommendation: low-poly procedural mesh, not Unity Terrain.</li>
+        <li><b>Biome Distribution</b> — a physical classification (Forest / Ruins / Wetland / Highland, or similar), <em>independent</em> of adaptive state. What the ground looks like permanently vs. how the world currently feels are different axes.</li>
+        <li><b>POI / Camp / Resource / Landmark Placement</b> — blue-noise scatter filtered by catalog eligibility, spacing, and terrain slope; landmarks placed first via a separate rare/guaranteed pass.</li>
+        <li><b>Authoring</b> — hand-built modular prefabs (already the project's convention) wrapped in a thin catalog entry the generator selects from. The generator never invents content, only composes it.</li>
+        <li><b>Enemy Spawning / Bosses</b> — <code class="inline">EnemyData</code>, <code class="inline">EnemyVariantData</code>, <code class="inline">CampSpawner</code>, <code class="inline">EncounterComposition</code> all reused verbatim. Bosses stay landmark-tier, likely still substantially hand-curated even once the terrain around them is generated.</li>
+        <li><b>Refuge / Base</b> — one generated (or still hand-placed) safe cell near world start, matching <code class="inline">RefugeZone.Main</code>'s existing single-refuge assumption; multi-refuge is a clean, explicitly deferred extension.</li>
+      </ol>
+
+      <h3>Terrain generation approach</h3>
+      <table>
+        <tr><th>Option</th><th>Fit</th></tr>
+        <tr><td><b>Unity Terrain</b> (heightmap)</td><td>Built-in LOD/streaming/painting, but its shader &amp; texture-splat pipeline sits awkwardly next to the project's Built-in-pipeline, hand-modeled low-poly Standard-shader packs — several existing nature packs are already confirmed broken under Built-in. Introduces a whole second content-authoring workflow the user would need to learn, working against "reduce workload."</td></tr>
+        <tr><td><b>Custom low-poly mesh</b> (recommended)</td><td>Faceted/quantized noise-deformed mesh grid, matching the MegaKit/RPGPP low-poly look already established. Full control over collision (plain MeshCollider) and seam-stitching; the tradeoff is hand-rolling LOD/streaming yourself. This mirrors what Valheim itself actually does — its terrain is a custom deformed mesh system, not raw off-the-shelf terrain tooling, precisely because of the stylistic control this gives.</td></tr>
+        <tr><td><b>MVP-lightest: flat/gently-noised ground</b></td><td>The project's current terrain <em>is</em> a flat greybox ground plane with prefab dressing. Shipping flat-per-cell ground first (Phase 1/2 below) before adding real height sculpting is a legitimate, low-risk first milestone, not a cut corner — it proves the chunk/placement pipeline before terrain math complicates it.</td></tr>
+      </table>
+    </section>
+
+    <section id="datamodel">
+      <h2><span class="num">2</span>World Data Model</h2>
+      <p class="lede">Sketch only — types, not implementation. Named to sit next to the existing <code class="inline">WorldRegion</code>/<code class="inline">RegionAdaptationProfile</code> without colliding with them.</p>
+
+      <pre><code>// Stable grid coordinate - the key every cell/save entry is addressed by
+struct WorldCoord { int cellX, cellZ }
+
+// Authored once, referenced by the generator - same ScriptableObject
+// pattern as every other config asset in this project
+class WorldGenerationConfig : ScriptableObject {
+    long seed;
+    int cellSizeMeters;            // e.g. 100-150
+    int worldRadiusCells;          // finite, bounded - not infinite streaming
+    NoiseSettings terrainNoise;
+    NoiseSettings biomeNoise;
+    BiomeDefinition[] biomes;
+    POICatalogEntry[] poiCatalog;
+    CampCatalogEntry[] campCatalog;
+    ResourceCatalogEntry[] resourceCatalog;
+    LandmarkCatalogEntry[] landmarkCatalog;   // mini-dungeons, boss arenas, refuge
+    PlacementRules placementRules;            // global min-distances, per-cell budgets
+}
+
+class BiomeDefinition : ScriptableObject {
+    string biomeId;
+    NoiseRange moistureRange, elevationRange;
+    Material[] groundMaterialSet;             // ties into existing M_World_* materials
+    VegetationCatalogEntry[] vegetation;      // scatter props - existing MegaKit prefabs
+}
+
+// A thin wrapper around an ALREADY hand-authored prefab - the generator
+// never builds gameplay content, only decides where an existing module goes
+class POICatalogEntry : ScriptableObject {
+    GameObject prefab;              // has PointOfInterest already wired, same as today
+    string[] allowedBiomeIds;
+    float footprintRadius;          // for spacing checks
+    float placementWeight;
+}
+// CampCatalogEntry / ResourceCatalogEntry / LandmarkCatalogEntry: same shape
+
+// PHYSICAL side - plain data, computed once, persisted, never a MonoBehaviour
+class GeneratedRegion {
+    WorldCoord coord;
+    string biomeId;
+    TerrainPatch terrain;            // heightmap or serialized mesh data
+    List&lt;PlacedEntity&gt; placedPOIs;
+    List&lt;PlacedEntity&gt; placedCamps;
+    List&lt;PlacedEntity&gt; placedResources;
+    List&lt;PlacedEntity&gt; placedLandmarks;
+    bool isLockedIn;                 // true once a save references this cell -
+                                      // from then on it is never re-derived from the seed
+}
+
+struct PlacedEntity {
+    string catalogEntryId;
+    string instanceId;    // stable save-system key, independent of any scene GUID
+    Vector3 localPosition;
+    Quaternion rotation;
+}
+
+// ADAPTIVE side - UNCHANGED. WorldRegion + RegionAdaptationProfile already
+// are AdaptiveRegionState; they just get attached to a generated cell's
+// trigger volume instead of only a hand-placed one.</code></pre>
+
+      <div class="card">
+        <h4>Why <code class="inline">GeneratedRegion</code> is plain data, not a component</h4>
+        <p style="margin:0">A bounded-but-large world can't keep every cell's GameObjects alive simultaneously. <code class="inline">GeneratedRegion</code> is the thing that survives when a cell unloads; the actual <code class="inline">WorldRegion</code> MonoBehaviour, terrain mesh, and placed prefabs only exist while a cell is loaded into the live scene.</p>
+      </div>
+    </section>
+
+    <section id="pipeline">
+      <h2><span class="num">3</span>Generation Pipeline</h2>
+      <p class="lede">Deterministic, staged, each stage reading only what earlier stages produced.</p>
+      <ol>
+        <li><b>Seed expansion</b> — <code class="inline">seed → per-concern seeds</code> via a stable hash per concern (terrain / biome / POI / resources / encounters), so one stage's algorithm changing doesn't perturb another's output.</li>
+        <li><b>Cell grid definition</b> — world bounds fixed at generation-config authoring time.</li>
+        <li><b>Per-cell biome classification</b> — 2D noise sampled at cell center, matched against <code class="inline">BiomeDefinition</code> ranges.</li>
+        <li><b>Per-cell terrain height</b> — layered noise, quantized for the low-poly look, blended across cell borders to avoid seams — the classic chunk-boundary bug, designed against explicitly rather than discovered late.</li>
+        <li><b>Landmark pass (rare, guaranteed)</b> — mini-dungeon entrances, boss arenas, refuge placed <em>first</em>, via a sparse deterministic pass with a large minimum radius, so the general scatter can route around them.</li>
+        <li><b>POI / Camp / Resource scatter</b> — blue-noise candidates filtered by biome eligibility, minimum spacing from other content and from landmarks, and terrain slope tolerance (querying stage 4's height data); accepted points get a weighted-random catalog pick.</li>
+        <li><b>NavMesh region tagging</b> — mark walkable terrain and placed-content footprints for baking (see Risks — this is the stage most likely to force a NavMeshSurface adoption).</li>
+        <li><b>Lock-in on first save</b> — once a cell is written to a save file, its placement list is <em>never regenerated</em>, only deserialized. This is what keeps a cleared camp cleared and an algorithm tweak from silently reshuffling a played world.</li>
+      </ol>
+    </section>
+
+    <section id="adaptation">
+      <h2><span class="num">4</span>Adaptation Integration</h2>
+      <p class="lede">The generator's only adaptation-side job is wiring, not new logic.</p>
+      <ul>
+        <li>Attach a <code class="inline">WorldRegion</code> (+ a <code class="inline">RegionAdaptationProfile</code>, likely <em>shared</em> across many cells of the same biome rather than one bespoke asset per cell — the profile is stateless tunable weights, the live state is on the instance) to each loaded cell's trigger volume.</li>
+        <li>Wire the spawned <code class="inline">WorldRegion</code> reference into each placed Camp/CampSpawner/RewardSource/POI instance at instantiation — mechanically the same shape as the hand-built <code class="inline">Camp_AdaptiveSecond</code> example, just automated instead of drag-and-dropped.</li>
+        <li><code class="inline">AdaptiveEncounterComposition</code>, <code class="inline">AdaptiveRewardTable</code>, <code class="inline">EnemyVariantData</code>-bearing <code class="inline">EnemyData</code>, and <code class="inline">RegionVisualAdapter</code> all already resolve against <code class="inline">RegionWorldState</code> generically. Zero changes needed.</li>
+      </ul>
+      <h3>Granularity: per-cell state (recommended for MVP)</h3>
+      <p>One <code class="inline">WorldRegion</code> per generated cell keeps a 1:1 mapping with <code class="inline">GeneratedRegion</code> and matches the existing anti-farming/committed-score logic, which already assumes one score per region instance. A coarser "biome cluster" adaptive granularity is possible later as a purely visual blending layer over several individually-scored cells — it would not require changing <code class="inline">WorldRegion</code> itself.</p>
+      <div class="risk">
+        <h4>Open question the doc does not resolve — legacy global atmosphere</h4>
+        <p>The existing <code class="inline">WorldAdaptationManager</code>/<code class="inline">WorldVisualAdapter</code> drives whole-scene fog/sky/ambient light from one global state. That doesn't extend cleanly to a world with many simultaneously-relevant regions. Resolving this is a visual-system decision, not an engineering one — flagged in Risks below rather than decided here.</p>
+      </div>
+    </section>
+
+    <section id="persistence">
+      <h2><span class="num">5</span>Save / Persistence Strategy</h2>
+      <p class="lede">Additive to the existing save shape, not a rewrite. Today's <code class="inline">SaveData</code> is one flat JSON blob with parallel string-ID arrays, and it assumes every Camp/POI that will ever exist is <em>already present</em> as a scene GameObject — the save just flips live-instance flags. That assumption breaks the moment content only exists once generated.</p>
+      <h3>Proposed extension</h3>
+      <ul>
+        <li><b>World seed + generation-config version</b>, saved once, top-level.</li>
+        <li><b>Per-cell state, keyed by <code class="inline">WorldCoord</code></b> — each visited cell's locked-in placement list (so a save never silently reshuffles if generation code changes later), its <code class="inline">WorldRegion</code>'s <code class="inline">committedScore</code>/<code class="inline">currentState</code>, and per-placed-instance flags (cleared / discovered / completed / harvested) keyed by <code class="inline">PlacedEntity.instanceId</code> — a stable generator-assigned id, not a scene GUID, since generated content has no permanent scene presence to key off.</li>
+        <li><b>Lazy persistence</b> — unvisited cells have no save entry at all and regenerate from the seed on first visit. Save size scales with "world explored," not "world size," keeping the format proportionate to what the existing JsonUtility-based system was designed for.</li>
+        <li><b>JsonUtility-compatible shape</b> — no <code class="inline">Dictionary&lt;&gt;</code> (JsonUtility can't serialize one, and the project already works around this everywhere with parallel arrays). The cell-state collection follows the same convention: an array of structs, each carrying its own <code class="inline">WorldCoord</code>.</li>
+        <li><b>Additive, not breaking</b> — the new per-cell array lives <em>alongside</em> today's existing flat arrays in <code class="inline">SaveData</code>. Hand-placed content (Refuge, the mini-dungeon, blockout camps) keeps using exactly what it uses today; only procedural cells touch the new shape. <code class="inline">GameSaveController</code> gains a parallel restore path, not a rewritten one.</li>
+      </ul>
+    </section>
+
+    <section id="authoring">
+      <h2><span class="num">6</span>Authoring Workflow</h2>
+      <p class="lede">Sized for one person with limited time. The actual workload reduction: author a great module once, the generator places arbitrarily many instances of it.</p>
+      <ol>
+        <li>Build a modular POI/Camp/Landmark prefab exactly as already done today — a visual space plus one <code class="inline">Camp</code>/<code class="inline">PointOfInterest</code>/<code class="inline">RewardSource</code> component, zero bespoke code. Unchanged from the current workflow.</li>
+        <li>Wrap it in a <code class="inline">POICatalogEntry</code>/<code class="inline">CampCatalogEntry</code> asset — a small new <code class="inline">[CreateAssetMenu]</code> ScriptableObject (prefab reference, allowed biomes, footprint radius, rarity weight), the same one-asset-per-thing convention already used for every other data type in this project (<code class="inline">RewardTable</code>, <code class="inline">EncounterComposition</code>, <code class="inline">EnemyData</code>).</li>
+        <li>Drag the entry into a <code class="inline">WorldGenerationConfig</code>'s catalog array.</li>
+        <li>Preview via an editor tool — a "Generate World Preview" button in the same family as the existing <code class="inline">CampEditor</code>/<code class="inline">CampSpawnerEditor</code>/<code class="inline">PointOfInterestEditor</code> one-click tools — running the pipeline in Edit mode with gizmo visualization, no Play mode required to see a layout.</li>
+        <li>The user never hand-places a procedurally-eligible POI's world position again — only authors the module.</li>
+      </ol>
+    </section>
+
+    <section id="risks">
+      <h2><span class="num">7</span>Risks</h2>
+
+      <div class="risk">
+        <h4>Terrain / render-pipeline mismatch</h4>
+        <p>Unity Terrain's shader and LOD system sits awkwardly next to this project's Built-in-pipeline, hand-modeled low-poly asset packs — several existing nature packs are already confirmed broken under Built-in. Mitigation: custom low-poly mesh terrain (see Section 1), at the cost of hand-rolling collision/LOD/seam-stitching.</p>
+      </div>
+
+      <div class="risk">
+        <h4>Legacy NavMesh baking does not scale to streaming</h4>
+        <p>The project's <code class="inline">bake_navmesh</code> is a full-scene synchronous static bake with no <code class="inline">NavMeshSurface</code> usage anywhere today. A growing procedural world cannot re-bake the entire navmesh every time a new cell loads without a real hitch. This is a genuine blocker for true streaming and points at adopting the <span class="mono">AI Navigation</span> package's <code class="inline">NavMeshSurface</code> (runtime, per-surface, incremental) — a real new dependency, not a nice-to-have.</p>
+      </div>
+
+      <div class="risk">
+        <h4>Dual adaptive-visual systems</h4>
+        <p>The legacy global <code class="inline">WorldAdaptationManager</code>/<code class="inline">WorldVisualAdapter</code> (whole-scene fog/sky/ambient) does not extend to a multi-region world. Needs a visual-system decision from the user before per-region atmosphere reads coherently with many regions visible at once — explicitly left open, not resolved here.</p>
+      </div>
+
+      <div class="risk">
+        <h4>Save file growth under JsonUtility</h4>
+        <p>Flat JSON with a full rewrite on every save is fine at the current hand-placed scale. A heavily-explored large world's cell-state array could grow into multi-MB territory over a long save; JsonUtility has no incremental or streaming write. Not an MVP blocker — worth monitoring if the explored world grows far past the current slice.</p>
+      </div>
+
+      <div class="risk">
+        <h4>Determinism drift across engine versions</h4>
+        <p><code class="inline">Random.Range</code>/noise implementations are stable within a Unity major version but not guaranteed forever. Mitigated by the "lock in on first visit" persistence rule above — only <em>unvisited</em> cells still depend on the generator staying byte-identical over time.</p>
+      </div>
+
+      <div class="risk">
+        <h4>Scene streaming model</h4>
+        <p>The project has zero additive-scene precedent — <code class="inline">Prototype_01.unity</code> is one monolithic scene, and every existing runtime-spawned object (UI, weapons, VFX) is already instantiated at runtime rather than scene-streamed. Recommendation: runtime instantiate/destroy of a plain GameObject hierarchy per cell, not additive scene loading, for MVP — far less Unity scene-management complexity, and it matches the codebase's existing idiom.</p>
+      </div>
+
+      <div class="risk">
+        <h4>Scope creep into simulating everything</h4>
+        <p>The explicit solo-developer constraint driving this whole document. Guarded against by design: a single biome type first, no true heightmap sculpting first, a deliberately small starting catalog, and every phase below shippable and testable in isolation before the next is attempted.</p>
+      </div>
+    </section>
+
+    <section id="mvp">
+      <h2><span class="num">8</span>MVP Implementation Plan &amp; Phases</h2>
+      <p class="lede">Each phase is independently testable and ships something visible — including the boring ones. No phase requires a later phase to exist to be verified.</p>
+
+      <div class="phase" id="phase0">
+        <div class="ph-head"><span class="ph-num">PHASE 0</span><h3>Data model &amp; seed plumbing</h3></div>
+        <p>No visible world change. Deliverable: <code class="inline">WorldGenerationConfig</code>, <code class="inline">WorldCoord</code>, the seed-expansion utility, <code class="inline">GeneratedRegion</code> as plain data.</p>
+        <div class="test"><b>Test</b> — Run the pipeline for the same seed twice, diff the outputs, assert byte-identical results for a fixed cell coordinate.</div>
+      </div>
+
+      <div class="phase" id="phase1">
+        <div class="ph-head"><span class="ph-num">PHASE 1</span><h3>Flat-ground cell instantiation</h3></div>
+        <p>No terrain height, no content yet. Instantiate a flat ground plane per cell (reusing existing <code class="inline">M_World_*</code> materials), sized to the grid, with a spawn/despawn lifecycle as the player crosses cell boundaries.</p>
+        <div class="test"><b>Test</b> — Walk between adjacent cells in Play mode; confirm no seam gaps/overlaps, no exceptions, and memory doesn't grow unbounded as cells unload.</div>
+      </div>
+
+      <div class="phase" id="phase2">
+        <div class="ph-head"><span class="ph-num">PHASE 2</span><h3>Biome classification + low-poly terrain height</h3></div>
+        <p>Noise-driven height replaces the flat plane; biome classification picks a ground material/vegetation set from a small hand-picked catalog of existing MegaKit prefabs.</p>
+        <div class="test"><b>Test</b> — Confirm adjacent-cell seams don't crack across several seeds; confirm the existing full-scene NavMesh bake still completes cleanly over generated geometry at this scale.</div>
+      </div>
+
+      <div class="phase" id="phase3">
+        <div class="ph-head"><span class="ph-num">PHASE 3</span><h3>POI / Camp / Resource catalog + scatter placement</h3></div>
+        <p><code class="inline">POICatalogEntry</code>/<code class="inline">CampCatalogEntry</code>/<code class="inline">ResourceCatalogEntry</code>, blue-noise scatter with spacing/biome filtering, instantiating existing hand-authored prefab types (start with a single test module as the catalog's only entry) snapped to Phase 2's terrain height.</p>
+        <div class="test"><b>Test</b> — Generate several seeds; confirm minimum spacing is never violated; confirm every placed Camp/POI activates/clears/discovers exactly like a hand-placed one (reuse this project's existing E2E verification technique — force-clear, force-discover, check state transitions).</div>
+      </div>
+
+      <div class="phase" id="phase4">
+        <div class="ph-head"><span class="ph-num">PHASE 4</span><h3>Adaptive region wiring</h3></div>
+        <p>Auto-attach a <code class="inline">WorldRegion</code> + shared <code class="inline">RegionAdaptationProfile</code> to each generated cell's trigger volume, wired into that cell's placed content exactly like <code class="inline">Camp_AdaptiveSecond</code>.</p>
+        <div class="test"><b>Test</b> — Drive a generated cell's committed score through <span class="tag balanced">Balanced</span> → <span class="tag blossom">Blossom</span> → <span class="tag decayed">Decayed</span>; confirm its placed content responds correctly, same verification shape as the existing region-adaptation tests.</div>
+      </div>
+
+      <div class="phase" id="phase5">
+        <div class="ph-head"><span class="ph-num">PHASE 5</span><h3>Landmark pass</h3></div>
+        <p>Guaranteed rare placement for mini-dungeon entrances / refuge, still instantiating existing hand-authored landmark prefabs.</p>
+        <div class="test"><b>Test</b> — Confirm configured landmark density/spacing holds across several seeds; confirm a generated mini-dungeon entrance behaves identically to the hand-placed one.</div>
+      </div>
+
+      <div class="phase" id="phase6">
+        <div class="ph-head"><span class="ph-num">PHASE 6</span><h3>Per-cell save / persistence</h3></div>
+        <p>Extend <code class="inline">SaveData</code>/<code class="inline">GameSaveController</code> with the new per-cell array, additive to the existing fields. Lock-in-on-visit semantics.</p>
+        <div class="test"><b>Test</b> — Clear a camp / discover a POI in a generated cell, save, quit, relaunch, Continue. Confirm the identical physical layout (not regenerated differently) and the same cleared/discovered state restore — the exact save/load methodology already proven on the hand-placed slice.</div>
+      </div>
+
+      <div class="phase" id="phase7">
+        <div class="ph-head"><span class="ph-num">PHASE 7</span><h3>NavMesh streaming</h3></div>
+        <p>Only attempted once Phases 1–6 prove the concept worth scaling. Replace/supplement the legacy full-scene static bake with <code class="inline">NavMeshSurface</code>, baked per-cell at instantiation.</p>
+        <div class="test"><b>Test</b> — Confirm enemies in a newly-generated, never-before-baked cell path correctly with no manual re-bake step.</div>
+      </div>
+    </section>
+
+    <section id="prototype">
+      <h2><span class="num">·</span>Prototype_01's Future</h2>
+      <p class="lede">Recommendation: keep it, reframed as the handcrafted starting region — Cell (0,0).</p>
+      <p>It becomes the one deterministic, non-regenerated, entirely hand-authored anchor every world seed still includes — the same role Valheim's own starting Meadows plays: not procedurally placed, always adjacent to spawn, hand-tuned for the opening minutes. The Refuge, the nearby Forge/Shrine, and the already-polished mini-dungeon stay exactly where they are; the generator's world bounds simply treat this existing footprint as reserved space, excluded from scatter placement so nothing ever overlaps it.</p>
+      <p>This is explicitly <b>not</b> a separate dev/test scene to discard, and <b>not</b> a mechanically-gated tutorial — just the one authored anchor the game already has, kept as the actual opening. It reuses everything already tested and tuned instead of throwing it away, and it's the natural place to keep validating new systems by hand before trusting them to the generator.</p>
+    </section>
+
+    <footer>
+      Grounded in a direct read of the live <code class="inline">Assets/Scripts</code> world, adaptation, camp/POI, enemy, loot, and save systems. Design only — no code has been written or changed for this proposal.
+    </footer>
+  </main>
+</div>

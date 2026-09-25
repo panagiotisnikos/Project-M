@@ -38,10 +38,20 @@ public class SaveData
     public string[] campIds = Array.Empty<string>();
     public bool[] campCleared = Array.Empty<bool>();
 
+    // Points of Interest - parallel arrays keyed by PointOfInterest.PoiId.
+    public string[] poiIds = Array.Empty<string>();
+    public bool[] poiDiscovered = Array.Empty<bool>();
+    public bool[] poiCompleted = Array.Empty<bool>();
+
     // Boss (single boss in the slice - one flag is enough for now).
     public bool bossDefeated;
 
-    // Refuge - the HearthEmber charge (see RefugeZone/HearthEmber) so a banked
-    // "second chance" survives a quit/reload instead of being re-earned for free.
-    public bool hasEmberCharge;
+    // Refuge - the HearthEmber charge count (see RefugeZone/HearthEmber) so banked
+    // "second chances" survive a quit/reload instead of being re-earned for free.
+    public int emberCharges;
+
+    // Progression - which ProgressionUnlocks have been purchased. Vestige (the currency
+    // they're bought with) needs no separate field - it's a plain inventory item, already
+    // covered by inventoryItemIds/inventoryCounts above.
+    public string[] unlockedProgressionIds = Array.Empty<string>();
 }

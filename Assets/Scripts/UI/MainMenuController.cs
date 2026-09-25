@@ -86,7 +86,7 @@ public class MainMenuController : MonoBehaviour
 
     public void QuitGame()
     {
-        Debug.Log("[MainMenu] Quit requested.");
+        DevLog.Log("[MainMenu] Quit requested.");
 
 #if UNITY_EDITOR
         UnityEditor.EditorApplication.isPlaying = false;

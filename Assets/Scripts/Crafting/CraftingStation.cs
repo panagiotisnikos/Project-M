@@ -18,20 +18,34 @@ public class CraftingStation : MonoBehaviour
     [SerializeField] private CraftingRecipe[] recipes;
 
     [Header("Interact")]
-    [SerializeField] private KeyCode interactKey = KeyCode.E;
     [SerializeField] private float interactRange = 2.6f;
     [SerializeField] private Transform player;
+
+    [Header("Audio")]
+    [SerializeField] private AudioClip openSfx;
+    [Range(0f, 1f)] [SerializeField] private float openVolume = 0.45f;
 
     private bool isOpen;
     private bool playerInRange;
 
     private CanvasGroup promptGroup;
     private TMP_Text promptText;
+    private Collider[] solidColliders;
 
     public string StationName => stationName;
     public CraftingStationType StationType => stationType;
     public int StationLevel => stationLevel;
     public CraftingRecipe[] Recipes => recipes;
+
+    /// <summary>True if at least one recipe here is unlocked and fully affordable right now.</summary>
+    public bool HasCraftableRecipe(Inventory inventory)
+    {
+        if (recipes == null || inventory == null) return false;
+        foreach (var r in recipes)
+            if (r != null && r.IsUnlocked && r.MatchesStation(this) && r.HasMaterials(inventory))
+                return true;
+        return false;
+    }
 
     private void Awake()
     {
@@ -41,6 +55,7 @@ public class CraftingStation : MonoBehaviour
             if (pm != null) player = pm.transform;
         }
 
+        solidColliders = InteractionRange.CollectSolidColliders(this);
         BuildPrompt();
     }
 
@@ -52,12 +67,13 @@ public class CraftingStation : MonoBehaviour
             return;
         }
 
-        float dist = Vector3.Distance(transform.position, player.position);
+        // Measured to the nearest collider surface, not the root, so it follows the visuals.
+        float dist = InteractionRange.Distance(transform, solidColliders, player.position);
         playerInRange = dist <= interactRange;
-        bool blocked = GameUIController.IsPaused || InventoryUI.IsOpen || CraftingUI.IsOpen;
+        bool blocked = GameUIController.IsPaused || InventoryUI.IsOpen || CraftingUI.IsOpen || ProgressionUI.IsOpen;
         SetPromptVisible(playerInRange && !blocked);
 
-        if (playerInRange && !blocked && Input.GetKeyDown(interactKey))
+        if (playerInRange && !blocked && Input.GetKeyDown(KeyBindings.Get(GameAction.Interact)))
         {
             OpenUI();
         }
@@ -74,6 +90,7 @@ public class CraftingStation : MonoBehaviour
 
         isOpen = true;
         SetPromptVisible(false);
+        CombatAudio.Play(openSfx, transform.position, openVolume);
         ui.Open(this, () => isOpen = false);
     }
 
@@ -96,10 +113,9 @@ public class CraftingStation : MonoBehaviour
         rect.sizeDelta = new Vector2(420f, 50f);
 
         promptText = textGO.AddComponent<TextMeshProUGUI>();
-        promptText.text = $"Press E to craft ({stationName})";
         promptText.alignment = TextAlignmentOptions.Center;
         promptText.fontSize = 30f;
-        promptText.color = new Color(0.95f, 0.66f, 0.28f);
+        promptText.color = UIPalette.Teal;
         promptText.fontStyle = FontStyles.Bold;
 
         var shadow = textGO.AddComponent<Shadow>();
@@ -110,6 +126,23 @@ public class CraftingStation : MonoBehaviour
         promptGroup.alpha = 0f;
         promptGroup.blocksRaycasts = false;
         promptGroup.interactable = false;
+
+        RefreshPromptText();
+    }
+
+    private void OnEnable()
+    {
+        KeyBindings.Changed += RefreshPromptText;
+    }
+
+    private void OnDisable()
+    {
+        KeyBindings.Changed -= RefreshPromptText;
+    }
+
+    private void RefreshPromptText()
+    {
+        if (promptText != null) promptText.text = $"Press {KeyBindings.Get(GameAction.Interact)} to craft ({stationName})";
     }
 
     private void SetPromptVisible(bool visible)
@@ -120,7 +153,7 @@ public class CraftingStation : MonoBehaviour
 
     private void OnDrawGizmosSelected()
     {
-        Gizmos.color = new Color(0.95f, 0.66f, 0.28f, 0.5f);
+        Gizmos.color = new Color(UIPalette.Teal.r, UIPalette.Teal.g, UIPalette.Teal.b, 0.5f);
         Gizmos.DrawWireSphere(transform.position, interactRange);
     }
 }

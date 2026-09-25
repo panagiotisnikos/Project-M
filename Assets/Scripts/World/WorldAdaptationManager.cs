@@ -28,6 +28,8 @@ public class WorldAdaptationManager : MonoBehaviour
     private float nextDebugLogTime;
 
     public WorldState CurrentState => currentState;
+    public float StableThreshold => stableThreshold;
+    public float DecayingThreshold => decayingThreshold;
 
     private void Update()
     {
@@ -56,7 +58,7 @@ public class WorldAdaptationManager : MonoBehaviour
             return;
 
         currentState = newState;
-        Debug.Log($"[WorldAdaptation] STATE CHANGED → {currentState} | Score: {score}");
+        DevLog.Log($"[WorldAdaptation] STATE CHANGED → {currentState} | Score: {score}");
     }
 
     private void LogDebugInfo(float score)
@@ -69,6 +71,6 @@ public class WorldAdaptationManager : MonoBehaviour
 
         nextDebugLogTime = Time.time + debugLogInterval;
 
-        Debug.Log($"[WorldAdaptation] Score: {score} | State: {currentState}");
+        DevLog.Log($"[WorldAdaptation] Score: {score} | State: {currentState}");
     }
 }

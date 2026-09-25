@@ -27,7 +27,7 @@ public class DemoObjectiveManager : MonoBehaviour
             performanceTracker.StopTracking();
         }
 
-        Debug.Log("[DemoObjective] Boss defeated. Vertical slice complete.");
+        DevLog.Log("[DemoObjective] Boss defeated. Vertical slice complete.");
         CurrentObjective = "Boss defeated";
         StatusMessage = "The boss is dead. Slice complete.";
     }

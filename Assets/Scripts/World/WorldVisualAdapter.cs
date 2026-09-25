@@ -148,7 +148,7 @@ public class WorldVisualAdapter : MonoBehaviour
             toAtmo = Resolve(state).Clone();
             t = 0f;
             SetDetail(state);
-            Debug.Log($"[WorldVisualAdapter] the land shifts: {lastState} -> {state}");
+            DevLog.Log($"[WorldVisualAdapter] the land shifts: {lastState} -> {state}");
             lastState = state;
         }
 

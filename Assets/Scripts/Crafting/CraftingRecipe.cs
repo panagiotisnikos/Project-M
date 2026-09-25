@@ -34,6 +34,15 @@ public class CraftingRecipe : ScriptableObject
              "so recipe assets authored now don't need to be redone when upgrades are implemented.")]
     public ItemData requiredUpgradeBase;
 
+    [Header("Progression gate (optional)")]
+    [Tooltip("If assigned, this recipe doesn't appear until the player has purchased this " +
+             "ProgressionUnlock - the 'crafting capability' progression category. Leave empty " +
+             "for a recipe available from the start.")]
+    public ProgressionUnlock requiredUnlock;
+
+    /// <summary>False only while a Progression gate is assigned and not yet purchased.</summary>
+    public bool IsUnlocked => requiredUnlock == null || ProgressionSystem.HasUnlock(requiredUnlock);
+
     public bool MatchesStation(CraftingStation station)
     {
         if (station == null) return requiredStationType == null;

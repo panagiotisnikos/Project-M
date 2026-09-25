@@ -36,7 +36,8 @@ public class BossController : MonoBehaviour
     {
         RefreshAbilities();
 
-        if (Input.GetKeyDown(KeyCode.B))
+        // Developer-only: dumps boss state to the log. Inert in release builds.
+        if (Debug.isDebugBuild && Input.GetKeyDown(KeyCode.B))
         {
             PrintBossState();
         }
@@ -73,25 +74,25 @@ public class BossController : MonoBehaviour
     {
         campDisabledHealing = true;
         canHeal = false;
-        Debug.Log("[Boss] Healing disabled by camp.");
+        DevLog.Log("[Boss] Healing disabled by camp.");
     }
 
     public void DisableSummons()
     {
         campDisabledSummons = true;
         canSummonMinions = false;
-        Debug.Log("[Boss] Summons disabled by camp.");
+        DevLog.Log("[Boss] Summons disabled by camp.");
     }
 
     public void DisableDecayAura()
     {
         campDisabledDecayAura = true;
         hasDecayAura = false;
-        Debug.Log("[Boss] Decay aura disabled by camp.");
+        DevLog.Log("[Boss] Decay aura disabled by camp.");
     }
 
     public void PrintBossState()
     {
-        Debug.Log($"[Boss] Heal: {canHeal}, Summons: {canSummonMinions}, Decay Aura: {hasDecayAura}");
+        DevLog.Log($"[Boss] Heal: {canHeal}, Summons: {canSummonMinions}, Decay Aura: {hasDecayAura}");
     }
 }

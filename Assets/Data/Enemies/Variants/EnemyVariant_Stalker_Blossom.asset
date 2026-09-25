@@ -1,0 +1,45 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e6010f76f68c6964a95d0115b7c2dfa6, type: 3}
+  m_Name: EnemyVariant_Stalker_Blossom
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyVariantData
+  variantLabel: Blossom Darter
+  detectionRange: 10
+  losePlayerRange: 22
+  alertDuration: 0.3
+  moveSpeed: 12
+  rotationSpeed: 20
+  stoppingDistance: 2.4
+  attackHitRange: 3
+  attackDamage: 5
+  attackWindupDuration: 0.3
+  attackRecoveryDuration: 0.3
+  attacks:
+  - attackName: Nip
+    damage: 5
+    windupDuration: 0.3
+    recoveryDuration: 0.3
+    weight: 2
+  - attackName: Dart Strike
+    damage: 6
+    windupDuration: 0.35
+    recoveryDuration: 0.3
+    weight: 1
+  postAttackBehaviour: 1
+  retreatDistance: 6
+  retreatDuration: 0.8
+  staggerDurationMultiplier: 0.85
+  postAttackVulnerabilityWindow: 0
+  postAttackVulnerabilityMultiplier: 1
+  materialOverride: {fileID: 0}
+  aggroVfxPrefab: {fileID: 0}
+  aggroSfxOverride: {fileID: 0}

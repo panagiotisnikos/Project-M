@@ -42,12 +42,10 @@ public class GameUIController : MonoBehaviour
 
     [Header("Controls Overlay")]
     [SerializeField] private CanvasGroup controlsOverlay;
-    [SerializeField] private KeyCode controlsKey = KeyCode.F1;
     [SerializeField] private float controlsInitialDuration = 7f;
     [SerializeField] private float controlsFadeDuration = 0.5f;
     [Header("Pause Menu")]
     [SerializeField] private GameObject pausePanel;
-    [SerializeField] private KeyCode pauseKey = KeyCode.Escape;
     [SerializeField] private string mainMenuSceneName = "Main Menu";
     [SerializeField] private OptionsMenuUI optionsMenu;
     [Header("Death Screen")]
@@ -104,6 +102,8 @@ private BossController bossController;
         Time.timeScale = 1f;
         gameEnded = false;
         GameSession.Reset();
+        ExplorationTracker.Reset();
+        ProgressionSystem.Reset();
 
 
         if (pausePanel != null)
@@ -152,7 +152,7 @@ private BossController bossController;
         if (gameEnded)
             return;
 
-        if (Input.GetKeyDown(pauseKey))
+        if (Input.GetKeyDown(KeyBindings.Get(GameAction.Pause)))
         {
             if (IsPaused)
             {
@@ -166,7 +166,7 @@ private BossController bossController;
             return;
         }
 
-        if (Input.GetKeyDown(controlsKey))
+        if (Input.GetKeyDown(KeyBindings.Get(GameAction.ToggleControlsOverlay)))
         {
             ToggleControlsOverlay();
         }
@@ -237,6 +237,17 @@ private BossController bossController;
         RefreshBossBar();
     }
 
+    // Cached last-displayed values so RefreshUI() (called every frame) only rebuilds a
+    // TMP string - and pays its allocation - when the underlying value actually changed.
+    private bool bossBarNameSet;
+    private int cachedHealthCurrent = int.MinValue, cachedHealthMax = int.MinValue;
+    private int cachedStaminaCurrent = int.MinValue, cachedStaminaMax = int.MinValue;
+    private string cachedObjective;
+    private WeaponData cachedWeapon;
+    private bool cachedWeaponSet;
+    private ShieldData cachedShield;
+    private bool cachedShieldSet;
+
     private void RefreshBossBar()
     {
         if (bossBarRoot == null)
@@ -251,6 +262,7 @@ private BossController bossController;
         if (bossBarRoot.activeSelf != show)
         {
             bossBarRoot.SetActive(show);
+            bossBarNameSet = false;
         }
 
         if (!show)
@@ -261,9 +273,11 @@ private BossController bossController;
             bossBarFill.fillAmount = bossHealth.Normalized;
         }
 
-        if (bossNameText != null)
+        // bossDisplayName is a fixed serialized value - only needs setting once per show.
+        if (bossNameText != null && !bossBarNameSet)
         {
             bossNameText.text = bossDisplayName;
+            bossBarNameSet = true;
         }
     }
 
@@ -284,11 +298,12 @@ private BossController bossController;
                 Mathf.Clamp01(normalizedHealth);
         }
 
-        if (healthValueText != null)
+        if (healthValueText != null &&
+            (playerHealth.CurrentHealth != cachedHealthCurrent || playerHealth.MaxHealth != cachedHealthMax))
         {
-            healthValueText.text =
-                $"{playerHealth.CurrentHealth} / " +
-                $"{playerHealth.MaxHealth}";
+            cachedHealthCurrent = playerHealth.CurrentHealth;
+            cachedHealthMax = playerHealth.MaxHealth;
+            healthValueText.text = $"{cachedHealthCurrent} / {cachedHealthMax}";
         }
     }
 
@@ -303,11 +318,15 @@ private BossController bossController;
                 playerStamina.NormalizedStamina;
         }
 
-        if (staminaValueText != null)
+        int roundedCurrent = Mathf.RoundToInt(playerStamina.CurrentStamina);
+        int roundedMax = Mathf.RoundToInt(playerStamina.MaxStamina);
+
+        if (staminaValueText != null &&
+            (roundedCurrent != cachedStaminaCurrent || roundedMax != cachedStaminaMax))
         {
-            staminaValueText.text =
-                $"{playerStamina.CurrentStamina:0} / " +
-                $"{playerStamina.MaxStamina:0}";
+            cachedStaminaCurrent = roundedCurrent;
+            cachedStaminaMax = roundedMax;
+            staminaValueText.text = $"{roundedCurrent} / {roundedMax}";
         }
     }
 
@@ -319,8 +338,12 @@ private BossController bossController;
             return;
         }
 
-        objectiveText.text =
-            demoObjectiveManager.CurrentObjective;
+        string current = demoObjectiveManager.CurrentObjective;
+        if (current == cachedObjective)
+            return;
+
+        cachedObjective = current;
+        objectiveText.text = current;
     }
 
     private void RefreshLoadout()
@@ -330,24 +353,24 @@ private BossController bossController;
 
         if (weaponText != null)
         {
-            WeaponData weapon =
-                playerEquipment.EquippedWeapon;
-
-            weaponText.text =
-                weapon != null
-                    ? weapon.WeaponName.ToUpper()
-                    : "NO WEAPON";
+            WeaponData weapon = playerEquipment.EquippedWeapon;
+            if (!cachedWeaponSet || weapon != cachedWeapon)
+            {
+                cachedWeapon = weapon;
+                cachedWeaponSet = true;
+                weaponText.text = weapon != null ? weapon.WeaponName.ToUpper() : "NO WEAPON";
+            }
         }
 
         if (shieldText != null)
         {
-            ShieldData shield =
-                playerEquipment.EquippedShield;
-
-            shieldText.text =
-                shield != null
-                    ? shield.ShieldName
-                    : "No Shield";
+            ShieldData shield = playerEquipment.EquippedShield;
+            if (!cachedShieldSet || shield != cachedShield)
+            {
+                cachedShield = shield;
+                cachedShieldSet = true;
+                shieldText.text = shield != null ? shield.ShieldName : "No Shield";
+            }
         }
     }
     private void ShowControlsTemporarily()
@@ -520,7 +543,7 @@ public void PauseGame()
 
     Cursor.visible = true;
 
-    Debug.Log(
+    DevLog.Log(
         "[GameUI] Game paused."
     );
 }
@@ -546,7 +569,7 @@ public void ResumeGame()
 
     Cursor.visible = false;
 
-    Debug.Log(
+    DevLog.Log(
         "[GameUI] Game resumed."
     );
 }
@@ -601,7 +624,7 @@ public void QuitGame()
 {
     PrepareForSceneChange();
 
-    Debug.Log(
+    DevLog.Log(
         "[GameUI] Quit requested."
     );
 
@@ -677,7 +700,7 @@ private IEnumerator ShowDeathScreenRoutine()
 
     deathRoutine = null;
 
-    Debug.Log(
+    DevLog.Log(
         "[GameUI] Death screen shown."
     );
 }
@@ -731,7 +754,7 @@ public void RespawnPlayer()
     Cursor.lockState = CursorLockMode.Locked;
     Cursor.visible = false;
 
-    Debug.Log("[GameUI] Player respawned.");
+    DevLog.Log("[GameUI] Player respawned.");
 }
 private void BeginCompletionSequence()
 {
@@ -782,7 +805,7 @@ private IEnumerator ShowCompletionScreenRoutine()
 
     completionRoutine = null;
 
-    Debug.Log(
+    DevLog.Log(
         "[GameUI] Vertical slice complete."
     );
 }
@@ -811,6 +834,7 @@ private void PopulateCompletionReport()
         {
             worldStateText.text =
                 GetWorldResponseTitle(state);
+            worldStateText.color = GetWorldResponseColor(state);
         }
 
         if (worldDescriptionText != null)
@@ -846,7 +870,19 @@ private string FormatTime(float seconds)
     return
         $"{minutes:00}:{remainingSeconds:00}";
 }
-private string GetWorldResponseTitle(
+/// <summary>Each ending gets its own colour, matching The Valley's Reading meter zones.</summary>
+public static Color GetWorldResponseColor(
+    WorldAdaptationManager.WorldState state)
+{
+    switch (state)
+    {
+        case WorldAdaptationManager.WorldState.Stable:   return UIPalette.Teal;
+        case WorldAdaptationManager.WorldState.Decaying: return UIPalette.Moss;
+        default:                                         return UIPalette.Lichen;
+    }
+}
+
+public static string GetWorldResponseTitle(
     WorldAdaptationManager.WorldState state)
 {
     switch (state)

@@ -47,7 +47,7 @@ public class RewardSource : MonoBehaviour
 
         if (resolved == null)
         {
-            if (logRolls) Debug.Log($"[RewardSource:{gameObject.name}] no table resolved - nothing granted.");
+            if (logRolls) DevLog.Log($"[RewardSource:{gameObject.name}] no table resolved - nothing granted.");
             return;
         }
 
@@ -66,7 +66,7 @@ public class RewardSource : MonoBehaviour
                 foreach (var (item, count) in rewards)
                     sb.Append($"{item.displayName} x{count}, ");
             }
-            Debug.Log(sb.ToString());
+            DevLog.Log(sb.ToString());
         }
 
         if (pickupPrefab == null)

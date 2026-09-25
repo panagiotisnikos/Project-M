@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7db28fa14f522054c9d5354814f40afe, type: 3}
+  m_Name: Item_Vestige
+  m_EditorClassIdentifier: Assembly-CSharp::ItemData
+  id: Vestige
+  displayName: Vestige
+  description: A trace of something meaningful you did. Spent at an Attunement Shrine
+    to permanently unlock a new capability - never consumed for anything else.
+  icon: {fileID: 0}
+  type: 4
+  maxStack: 20
+  weight: 0.1
+  weaponData: {fileID: 0}
+  shieldData: {fileID: 0}
+  armorData: {fileID: 0}
+  worldPrefab: {fileID: 0}
+  staminaRegenBonus: 0
+  healPerSecond: 0
+  buffDuration: 0

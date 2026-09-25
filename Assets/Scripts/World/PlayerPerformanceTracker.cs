@@ -39,6 +39,13 @@ public class PlayerPerformanceTracker : MonoBehaviour
     public int BlocksHeld => blocksHeld;
     public int HitsTaken => hitsTaken;
 
+    // Signal weights, read-only - the post-game "Valley's Reading" shows the math.
+    public float ParryWeight => parryWeight;
+    public float DodgeWeight => dodgeWeight;
+    public float BlockWeight => blockWeight;
+    public float HitPenalty => hitPenalty;
+    public float DamagePenalty => damagePenalty;
+
     private void Update()
     {
         if (isTracking) timeAlive += Time.deltaTime;

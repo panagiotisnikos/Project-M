@@ -19,7 +19,7 @@ public class BossArenaTrigger : MonoBehaviour
 
         if (requiredCamp != null && !requiredCamp.IsCleared)
         {
-            Debug.Log("[BossArena] Locked. Clear the camp first.");
+            DevLog.Log("[BossArena] Locked. Clear the camp first.");
             if (demoObjectiveManager != null)
             {
                 demoObjectiveManager.ShowStatus("Boss arena locked. Clear the camp first.");
@@ -29,7 +29,7 @@ public class BossArenaTrigger : MonoBehaviour
 
         hasTriggered = true;
 
-        Debug.Log("[BossArena] Player entered boss arena. Fight begins.");
+        DevLog.Log("[BossArena] Player entered boss arena. Fight begins.");
 
         if (bossController != null)
         {

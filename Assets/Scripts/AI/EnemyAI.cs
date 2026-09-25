@@ -98,6 +98,35 @@ private float staggerEndTime;
     /// attackWindupDuration/attackRecoveryDuration), keeping old archetypes unchanged.</summary>
     private EnemyAttackDefinition currentAttackChoice;
 
+    // --- Adaptive Enemy Variants V1 ---
+    // The fields below mirror the handful of EnemyData values that aren't already
+    // copied into a plain runtime field by ApplyEnemyData() (moveSpeed, stoppingDistance,
+    // etc. already are, and ApplyVariant() below overwrites those same fields directly).
+    // Every state-machine method reads these "active*" fields instead of enemyData.xxx
+    // directly, so a variant swap never needs to touch the shared EnemyData/EnemyVariantData
+    // assets themselves - only this instance's copies.
+    private EnemyVariantData activeVariant;
+    private RegionWorldState? lastAppliedRegionState;
+    private EnemyAttackDefinition[] activeAttacks;
+    private PostAttackBehaviour activePostAttackBehaviour = PostAttackBehaviour.Reengage;
+    private float activeRetreatDistance = 4f;
+    private float activeRetreatDuration = 1.2f;
+    private float activeStaggerDurationMultiplier = 1f;
+    private float activePostAttackVulnerabilityWindow = 0f;
+    private float activePostAttackVulnerabilityMultiplier = 1f;
+    private float baseAlertDuration;
+    private Material baseMaterialAsset;
+    private Material variantMaterialInstance;
+    private EnemyVariantData appliedVisualVariant;
+
+    /// <summary>The variant currently applied for this instance's resolved region state, or
+    /// null if this archetype doesn't use variants (or the current state has no variant asset
+    /// assigned, i.e. it's running the archetype's own base stat block).</summary>
+    public EnemyVariantData ActiveVariant => activeVariant;
+
+    /// <summary>The RegionWorldState this instance last resolved its variant against.</summary>
+    public RegionWorldState ResolvedRegionState => lastAppliedRegionState ?? RegionWorldState.Balanced;
+
     private Color originalColor;
     private NavMeshAgent agent;
 
@@ -119,8 +148,11 @@ private float staggerEndTime;
         rb.constraints = RigidbodyConstraints.FreezeRotation;
         rb.isKinematic = true;
 
+        baseAlertDuration = alertDuration;
+
         if (enemyRenderer != null)
         {
+            baseMaterialAsset = enemyRenderer.sharedMaterial;
             originalColor = enemyRenderer.material.color;
             modelTransform = enemyRenderer.transform;
             modelBaseScale = modelTransform.localScale;
@@ -134,8 +166,7 @@ private float staggerEndTime;
         agent.speed = moveSpeed;
         agent.acceleration = 40f;
         agent.angularSpeed = 999f;      // internal steering still needs this > 0 to move
-        combatStoppingDistance = Mathf.Max(0.2f, stoppingDistance - 0.4f);
-        agent.stoppingDistance = combatStoppingDistance;
+        RefreshCombatStoppingDistance();
         agent.autoBraking = true;
         agent.obstacleAvoidanceType = ObstacleAvoidanceType.LowQualityObstacleAvoidance;
 
@@ -167,6 +198,7 @@ private float staggerEndTime;
 
     private void Update()
     {
+        UpdateVariant();
         UpdateState();
         UpdateTelegraphPunch();
         TrackRealSpeed();
@@ -265,7 +297,7 @@ private float staggerEndTime;
 
                 if (Time.time >= stateEndTime)
                 {
-                    if (enemyData != null && enemyData.postAttackBehaviour == PostAttackBehaviour.Retreat)
+                    if (activePostAttackBehaviour == PostAttackBehaviour.Retreat)
                     {
                         BeginRetreat();
                     }
@@ -373,7 +405,18 @@ private float staggerEndTime;
         alertStartTime = Time.time;
         hasWanderPoint = false;
         SetTelegraphVisual(false);
-        CombatAudio.Play(aggroSfx, transform.position, aggroVolume);
+
+        AudioClip aggroClip =
+            (activeVariant != null && activeVariant.aggroSfxOverride != null)
+                ? activeVariant.aggroSfxOverride
+                : aggroSfx;
+        CombatAudio.Play(aggroClip, transform.position, aggroVolume);
+
+        if (activeVariant != null && activeVariant.aggroVfxPrefab != null)
+        {
+            Instantiate(activeVariant.aggroVfxPrefab, transform.position + Vector3.up * 0.9f, Quaternion.identity);
+        }
+
         AggroReacted?.Invoke();
     }
 
@@ -489,26 +532,26 @@ private float staggerEndTime;
     /// is empty (the archetype uses the single legacy attack fields instead).</summary>
     private EnemyAttackDefinition ChooseAttack()
     {
-        if (enemyData == null || enemyData.attacks == null || enemyData.attacks.Length == 0)
+        if (activeAttacks == null || activeAttacks.Length == 0)
             return null;
 
-        if (enemyData.attacks.Length == 1)
-            return enemyData.attacks[0];
+        if (activeAttacks.Length == 1)
+            return activeAttacks[0];
 
         float totalWeight = 0f;
-        foreach (var atk in enemyData.attacks)
+        foreach (var atk in activeAttacks)
             totalWeight += Mathf.Max(0.01f, atk.weight);
 
         float roll = Random.value * totalWeight;
 
-        foreach (var atk in enemyData.attacks)
+        foreach (var atk in activeAttacks)
         {
             roll -= Mathf.Max(0.01f, atk.weight);
             if (roll <= 0f)
                 return atk;
         }
 
-        return enemyData.attacks[enemyData.attacks.Length - 1];
+        return activeAttacks[activeAttacks.Length - 1];
     }
 
     private void BeginAttackWindup()
@@ -533,7 +576,7 @@ private float staggerEndTime;
         SetTelegraphVisual(true);
         AttackStarted?.Invoke();
 
-        Debug.Log(
+        DevLog.Log(
             $"[{gameObject.name}] Attack wind-up started. " +
             $"Hit in {adaptedWindupDuration:0.00}s."
         );
@@ -550,7 +593,7 @@ private float staggerEndTime;
 
         if (distanceToPlayer > attackHitRange)
         {
-            Debug.Log($"[{gameObject.name}] Attack missed.");
+            DevLog.Log($"[{gameObject.name}] Attack missed.");
             return;
         }
 
@@ -574,7 +617,7 @@ private float staggerEndTime;
             this
         );
 
-        Debug.Log(
+        DevLog.Log(
             $"[{gameObject.name}] {(currentAttackChoice != null ? currentAttackChoice.attackName : "Attack")} " +
             $"hit for {damage} damage."
         );
@@ -594,9 +637,11 @@ private float staggerEndTime;
 
         stateEndTime = Time.time + adaptedRecoveryDuration;
 
-        // "The clean opening right after the swing" - see EnemyData.postAttackVulnerabilityWindow.
-        if (enemyData != null && enemyData.postAttackVulnerabilityWindow > 0f)
-            vulnerableUntil = Time.time + enemyData.postAttackVulnerabilityWindow;
+        // "The clean opening right after the swing" - see EnemyVariantData.postAttackVulnerabilityWindow.
+        if (activePostAttackVulnerabilityWindow > 0f)
+            vulnerableUntil = Time.time + activePostAttackVulnerabilityWindow;
+        else
+            vulnerableUntil = -1f;
     }
 
     private float vulnerableUntil = -1f;
@@ -668,12 +713,12 @@ private float staggerEndTime;
     private void BeginRetreat()
     {
         ChangeState(EnemyState.Retreat);
-        stateEndTime = Time.time + (enemyData != null ? enemyData.retreatDuration : 1.2f);
+        stateEndTime = Time.time + activeRetreatDuration;
 
         if (agent == null || !agent.isOnNavMesh || player == null)
             return;
 
-        float distance = enemyData != null ? enemyData.retreatDistance : 4f;
+        float distance = activeRetreatDistance;
         Vector3 awayDir = (transform.position - player.position);
         awayDir.y = 0f;
         awayDir = awayDir.sqrMagnitude > 0.0001f ? awayDir.normalized : -transform.forward;
@@ -768,6 +813,9 @@ private float staggerEndTime;
         enemyRenderer.material.color =
             isActive ? staggerColor : originalColor;
     }
+    /// <summary>Configures this instance to the archetype's own base stat block - both the
+    /// original per-species setup at Awake, and (via ApplyVariant) what "no variant assigned
+    /// for this region state" falls back to.</summary>
     private void ApplyEnemyData()
     {
         if (enemyData == null)
@@ -782,6 +830,125 @@ private float staggerEndTime;
         attackDamage = enemyData.attackDamage;
         attackWindupDuration = enemyData.attackWindupDuration;
         attackRecoveryDuration = enemyData.attackRecoveryDuration;
+        alertDuration = baseAlertDuration;
+
+        activeVariant = null;
+        activeAttacks = enemyData.attacks;
+        activePostAttackBehaviour = enemyData.postAttackBehaviour;
+        activeRetreatDistance = enemyData.retreatDistance;
+        activeRetreatDuration = enemyData.retreatDuration;
+        activeStaggerDurationMultiplier = enemyData.staggerDurationMultiplier;
+        activePostAttackVulnerabilityWindow = enemyData.postAttackVulnerabilityWindow;
+        activePostAttackVulnerabilityMultiplier = enemyData.postAttackVulnerabilityMultiplier;
+    }
+
+    private void RefreshCombatStoppingDistance()
+    {
+        combatStoppingDistance = Mathf.Max(0.2f, stoppingDistance - 0.4f);
+        if (agent != null)
+            agent.stoppingDistance = combatStoppingDistance;
+    }
+
+    /// <summary>
+    /// Adaptive Enemy Variants V1: re-checked every frame (two cheap reads) but only actually
+    /// re-applies when the resolved RegionWorldState changes - the same automatic-selection
+    /// signal EnemyData.decayedRecoveryMultiplier/RewardSource's AdaptiveRewardTable already use
+    /// (WorldRegion.ActiveRegion, "whichever region the player currently stands in"). A region
+    /// flipping state mid-fight is picked up on the enemy's next Update - it doesn't retroactively
+    /// change an attack already in flight (currentAttackChoice is cached separately), only what it
+    /// does next.
+    /// </summary>
+    private void UpdateVariant()
+    {
+        if (enemyData == null)
+            return;
+
+        RegionWorldState resolvedState =
+            WorldRegion.ActiveRegion != null
+                ? WorldRegion.ActiveRegion.CurrentState
+                : RegionWorldState.Balanced;
+
+        if (lastAppliedRegionState.HasValue && lastAppliedRegionState.Value == resolvedState)
+            return;
+
+        lastAppliedRegionState = resolvedState;
+
+        EnemyVariantData variant = resolvedState switch
+        {
+            RegionWorldState.Blossom => enemyData.blossomVariant,
+            RegionWorldState.Decayed => enemyData.decayedVariant,
+            _ => enemyData.balancedVariant
+        };
+
+        ApplyVariant(variant);
+    }
+
+    private void ApplyVariant(EnemyVariantData variant)
+    {
+        if (variant == null)
+        {
+            // No authored variant for this state - the archetype's own base stat block IS the fallback.
+            ApplyEnemyData();
+            RefreshCombatStoppingDistance();
+            ApplyVariantVisuals(null);
+            return;
+        }
+
+        activeVariant = variant;
+
+        moveSpeed = variant.moveSpeed;
+        rotationSpeed = variant.rotationSpeed;
+        detectionRange = variant.detectionRange;
+        losePlayerRange = variant.losePlayerRange;
+        stoppingDistance = variant.stoppingDistance;
+        attackHitRange = variant.attackHitRange;
+        attackDamage = variant.attackDamage;
+        attackWindupDuration = variant.attackWindupDuration;
+        attackRecoveryDuration = variant.attackRecoveryDuration;
+        alertDuration = variant.alertDuration;
+
+        activeAttacks = variant.attacks;
+        activePostAttackBehaviour = variant.postAttackBehaviour;
+        activeRetreatDistance = variant.retreatDistance;
+        activeRetreatDuration = variant.retreatDuration;
+        activeStaggerDurationMultiplier = variant.staggerDurationMultiplier;
+        activePostAttackVulnerabilityWindow = variant.postAttackVulnerabilityWindow;
+        activePostAttackVulnerabilityMultiplier = variant.postAttackVulnerabilityMultiplier;
+
+        RefreshCombatStoppingDistance();
+        ApplyVariantVisuals(variant);
+
+        DevLog.Log($"[{gameObject.name}] Variant applied: {variant.variantLabel} (region state {lastAppliedRegionState}).");
+    }
+
+    /// <summary>Swaps in the variant's material (a fresh instance, never the shared asset - the
+    /// same MaterialPropertyBlock-adjacent safety pattern RegionVisualAdapter uses, needed here
+    /// because SetTelegraphVisual/SetStaggerVisual/StartHitFlash all mutate .material.color
+    /// directly). No-ops entirely for archetypes/states that don't assign a materialOverride.</summary>
+    private void ApplyVariantVisuals(EnemyVariantData variant)
+    {
+        if (enemyRenderer == null || variant == appliedVisualVariant)
+            return;
+
+        appliedVisualVariant = variant;
+
+        if (variantMaterialInstance != null)
+        {
+            Destroy(variantMaterialInstance);
+            variantMaterialInstance = null;
+        }
+
+        Material sourceMaterial =
+            (variant != null && variant.materialOverride != null)
+                ? variant.materialOverride
+                : baseMaterialAsset;
+
+        if (sourceMaterial == null)
+            return;
+
+        variantMaterialInstance = new Material(sourceMaterial);
+        enemyRenderer.material = variantMaterialInstance;
+        originalColor = variantMaterialInstance.color;
     }
 
     private float GetDistanceToPlayer()
@@ -845,7 +1012,7 @@ private float staggerEndTime;
 
         StopMoving();
 
-        Debug.Log(
+        DevLog.Log(
             $"[{gameObject.name}] Hit reaction " +
             $"for {duration:0.00}s."
         );
@@ -860,11 +1027,11 @@ private float staggerEndTime;
         currentState = EnemyState.Staggered;
 
         float adaptedDuration =
-            duration * (enemyData != null ? enemyData.staggerDurationMultiplier : 1f);
+            duration * activeStaggerDurationMultiplier;
 
-        bool caughtInOpening = enemyData != null && Time.time <= vulnerableUntil;
+        bool caughtInOpening = vulnerableUntil > 0f && Time.time <= vulnerableUntil;
         if (caughtInOpening)
-            adaptedDuration *= enemyData.postAttackVulnerabilityMultiplier;
+            adaptedDuration *= activePostAttackVulnerabilityMultiplier;
 
         /*
         * Refresh the stagger duration even if the enemy
@@ -876,7 +1043,7 @@ private float staggerEndTime;
         SetStaggerVisual(true);
         Staggered?.Invoke(adaptedDuration);
 
-        Debug.Log(
+        DevLog.Log(
             $"[{gameObject.name}] STAGGERED " +
             $"for {adaptedDuration:0.00}s (base {duration:0.00}s)" +
             $"{(caughtInOpening ? " - caught in the post-attack opening!" : "")}."

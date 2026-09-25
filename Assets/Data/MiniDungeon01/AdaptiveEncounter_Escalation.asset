@@ -1,0 +1,17 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6a568d13f26ca6e44848e21f3b67b837, type: 3}
+  m_Name: AdaptiveEncounter_Escalation
+  m_EditorClassIdentifier: Assembly-CSharp::AdaptiveEncounterComposition
+  balanced: {fileID: 11400000, guid: 717ea7a3b9d879745b69f0972bf539d4, type: 2}
+  blossom: {fileID: 11400000, guid: 95edc96c5f785c74c86fe071af716a24, type: 2}
+  decayed: {fileID: 11400000, guid: f32ccb15067b72f4cb5b766f096d3c53, type: 2}

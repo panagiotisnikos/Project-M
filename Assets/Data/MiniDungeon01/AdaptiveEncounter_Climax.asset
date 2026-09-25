@@ -1,0 +1,17 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6a568d13f26ca6e44848e21f3b67b837, type: 3}
+  m_Name: AdaptiveEncounter_Climax
+  m_EditorClassIdentifier: Assembly-CSharp::AdaptiveEncounterComposition
+  balanced: {fileID: 11400000, guid: e0a05ffbfd4aef44a9c939126b4a61a7, type: 2}
+  blossom: {fileID: 11400000, guid: 62b8b34fffdb34c47af03b5630b76e75, type: 2}
+  decayed: {fileID: 11400000, guid: 4733ab928dab1034fbeb2c4053040521, type: 2}

@@ -20,10 +20,20 @@ public class HearthEmber : MonoBehaviour
     [Range(0f, 1f)] [SerializeField] private float sfxVolume = 0.5f;
     [SerializeField] private float consumedTrauma = 0.6f;
 
-    public bool HasCharge { get; private set; }
+    [Header("Capacity")]
+    [Tooltip("Charges available without any progression unlock.")]
+    [Min(1)] [SerializeField] private int baseMaxCharges = 1;
+    [Tooltip("Optional - if assigned and purchased at an Attunement Shrine (see 'Ember Reserve'), " +
+             "capacity becomes baseMaxCharges + reserveBonusCharges. A direct poll of " +
+             "ProgressionSystem.HasUnlock, not an event - see ProgressionUnlock's own comment for why.")]
+    [SerializeField] private ProgressionUnlock reserveUnlock;
+    [Min(1)] [SerializeField] private int reserveBonusCharges = 1;
 
-    /// <summary>Fires whenever the charge is granted or spent (UI hook).</summary>
-    public event System.Action<bool> Changed;
+    public int Charges { get; private set; }
+    public int MaxCharges => baseMaxCharges + (reserveUnlock != null && ProgressionSystem.HasUnlock(reserveUnlock) ? reserveBonusCharges : 0);
+
+    /// <summary>Fires whenever a charge is granted or spent (UI hook). Argument is the new count.</summary>
+    public event System.Action<int> Changed;
 
     private CanvasGroup badgeGroup;
 
@@ -33,37 +43,37 @@ public class HearthEmber : MonoBehaviour
         RefreshBadge();
     }
 
-    /// <summary>Grants the charge if not already held. No-op if one is already
-    /// banked - V1 deliberately caps at a single charge, no stockpiling.</summary>
+    /// <summary>Grants one charge if under capacity. No-op once at MaxCharges - V1 deliberately
+    /// caps stockpiling at whatever capacity has been earned, not unlimited banking.</summary>
     public void Grant()
     {
-        if (HasCharge) return;
+        if (Charges >= MaxCharges) return;
 
-        HasCharge = true;
+        Charges++;
         CombatAudio.Play(grantedSfx, transform.position, sfxVolume);
-        Debug.Log("[HearthEmber] Ember kindled - it will spare you from one killing blow.");
+        DevLog.Log($"[HearthEmber] Ember kindled ({Charges}/{MaxCharges}) - it will spare you from a killing blow.");
         RefreshBadge();
-        Changed?.Invoke(HasCharge);
+        Changed?.Invoke(Charges);
     }
 
-    /// <summary>Spends the charge if held. Returns whether it fired.</summary>
+    /// <summary>Spends one charge if any are held. Returns whether it fired.</summary>
     public bool TryConsume()
     {
-        if (!HasCharge) return false;
+        if (Charges <= 0) return false;
 
-        HasCharge = false;
+        Charges--;
         CombatAudio.Play(consumedSfx, transform.position, sfxVolume);
         if (CameraShake.Instance != null) CameraShake.Instance.AddTrauma(consumedTrauma);
-        Debug.Log("[HearthEmber] The ember burned out to spare you.");
+        DevLog.Log($"[HearthEmber] The ember burned out to spare you ({Charges}/{MaxCharges} left).");
         RefreshBadge();
-        Changed?.Invoke(HasCharge);
+        Changed?.Invoke(Charges);
         return true;
     }
 
     /// <summary>Silent restore from a save file - no SFX/shake, just state + UI.</summary>
-    public void SetCharge(bool value)
+    public void SetCharges(int value)
     {
-        HasCharge = value;
+        Charges = Mathf.Clamp(value, 0, MaxCharges);
         RefreshBadge();
     }
 
@@ -92,7 +102,7 @@ public class HearthEmber : MonoBehaviour
         badgeText.text = "EMBER READY";
         badgeText.alignment = TextAlignmentOptions.MidlineLeft;
         badgeText.fontSize = 22f;
-        badgeText.color = new Color(1f, 0.55f, 0.2f);
+        badgeText.color = UIPalette.Firefly;
         badgeText.fontStyle = FontStyles.Bold;
 
         var shadow = textGo.AddComponent<Shadow>();
@@ -106,6 +116,7 @@ public class HearthEmber : MonoBehaviour
 
     private void RefreshBadge()
     {
-        if (badgeGroup != null) badgeGroup.alpha = HasCharge ? 1f : 0f;
+        if (badgeGroup != null) badgeGroup.alpha = Charges > 0 ? 1f : 0f;
+        if (badgeText != null) badgeText.text = MaxCharges > 1 ? $"EMBER READY ({Charges}/{MaxCharges})" : "EMBER READY";
     }
 }

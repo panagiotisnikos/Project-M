@@ -12,7 +12,6 @@ public class InventoryUI : MonoBehaviour
 {
     public static bool IsOpen { get; private set; }
 
-    [SerializeField] private KeyCode toggleKey = KeyCode.Tab;
     [SerializeField] private int columns = 6;
     [SerializeField] private int rows = 4;
     [SerializeField] private float cell = 62f;
@@ -40,7 +39,8 @@ public class InventoryUI : MonoBehaviour
     private static readonly Color Stone = new Color(0.14f, 0.14f, 0.16f, 1f);
     private static readonly Color StoneTint = new Color(0.62f, 0.63f, 0.68f, 1f);
     private static readonly Color Parch = new Color(0.87f, 0.83f, 0.74f);
-    private static readonly Color Amber = new Color(0.95f, 0.66f, 0.28f);
+    private static readonly Color Title = UIPalette.Lichen;
+    private static readonly Color Accent = UIPalette.Teal;
 
     private void Awake()
     {
@@ -74,7 +74,7 @@ public class InventoryUI : MonoBehaviour
 
     private void Update()
     {
-        if (Input.GetKeyDown(toggleKey) && !GameUIController.IsPaused)
+        if (Input.GetKeyDown(KeyBindings.Get(GameAction.ToggleInventory)) && !GameUIController.IsPaused)
             SetOpen(!IsOpen);
 
         if (IsOpen && dragFrom >= 0 && dragGhost != null)
@@ -128,7 +128,7 @@ public class InventoryUI : MonoBehaviour
         var frImg = fr.gameObject.AddComponent<Image>();
         frImg.sprite = frame; frImg.type = Image.Type.Sliced; frImg.raycastTarget = false;
 
-        var header = NewText("Header", panel, "PACK", 22, Amber, TextAlignmentOptions.TopLeft);
+        var header = NewText("Header", panel, "PACK", 22, Title, TextAlignmentOptions.TopLeft);
         header.rectTransform.anchorMin = new Vector2(0f, 1f); header.rectTransform.anchorMax = new Vector2(1f, 1f);
         header.rectTransform.pivot = new Vector2(0f, 1f);
         header.rectTransform.anchoredPosition = new Vector2(22f, -14f);
@@ -162,12 +162,12 @@ public class InventoryUI : MonoBehaviour
 
             var equipRt = NewRect("Equipped", cellRt, new Vector2(0f, 1f), new Vector2(0f, 1f));
             equipRt.pivot = new Vector2(0f, 1f); equipRt.sizeDelta = new Vector2(10f, 10f); equipRt.anchoredPosition = new Vector2(3f, -3f);
-            var eqImg = equipRt.gameObject.AddComponent<Image>(); eqImg.color = Amber; eqImg.raycastTarget = false;
+            var eqImg = equipRt.gameObject.AddComponent<Image>(); eqImg.color = Accent; eqImg.raycastTarget = false;
             equipRt.gameObject.SetActive(false);
 
             var hotRt = NewRect("Hotbar", cellRt, new Vector2(0f, 0f), new Vector2(1f, 0f));
             hotRt.pivot = new Vector2(0.5f, 0f); hotRt.sizeDelta = new Vector2(0f, 3f); hotRt.anchoredPosition = Vector2.zero;
-            var hotImg = hotRt.gameObject.AddComponent<Image>(); hotImg.color = new Color(0.55f, 0.4f, 0.18f, 1f); hotImg.raycastTarget = false;
+            var hotImg = hotRt.gameObject.AddComponent<Image>(); hotImg.color = UIPalette.MossDim; hotImg.raycastTarget = false;
 
             var s = cellRt.gameObject.AddComponent<InventorySlotUI>();
             s.Init(this, idx, bg, icon, count, equipRt.gameObject, hotRt.gameObject);
@@ -181,7 +181,7 @@ public class InventoryUI : MonoBehaviour
         var wbFill = NewRect("Fill", wbBg, Vector2.zero, new Vector2(1f, 1f));
         wbFill.offsetMin = Vector2.zero; wbFill.offsetMax = Vector2.zero;
         weightFill = wbFill.gameObject.AddComponent<Image>();
-        weightFill.color = new Color(0.80f, 0.56f, 0.24f, 1f);
+        weightFill.color = UIPalette.Sage;
         weightFill.type = Image.Type.Filled; weightFill.fillMethod = Image.FillMethod.Horizontal; weightFill.fillAmount = 0f;
         weightText = NewText("WeightText", panel, "0 / 0", 13, Parch, TextAlignmentOptions.Center);
         weightText.rectTransform.anchorMin = new Vector2(0f, 0f); weightText.rectTransform.anchorMax = new Vector2(1f, 0f);
@@ -202,7 +202,7 @@ public class InventoryUI : MonoBehaviour
         var ttImg = tooltip.AddComponent<Image>(); ttImg.sprite = slate; ttImg.type = Image.Type.Sliced; ttImg.color = new Color(0.5f, 0.5f, 0.55f, 1f); ttImg.raycastTarget = false;
         tooltipText = NewText("Text", tooltip.transform, "", 14, Parch, TextAlignmentOptions.TopLeft);
         tooltipText.rectTransform.offsetMin = new Vector2(12f, 10f); tooltipText.rectTransform.offsetMax = new Vector2(-12f, -10f);
-        tooltipText.enableWordWrapping = true; tooltipText.raycastTarget = false;
+        tooltipText.textWrappingMode = TextWrappingModes.Normal; tooltipText.raycastTarget = false;
         tooltip.SetActive(false);
 
         // drag ghost
@@ -264,7 +264,7 @@ public class InventoryUI : MonoBehaviour
         float total = inv.TotalWeight();
         float limit = playerInventory != null ? playerInventory.CarryLimit : 1f;
         if (weightFill != null) weightFill.fillAmount = Mathf.Clamp01(total / Mathf.Max(1f, limit));
-        if (weightFill != null) weightFill.color = total > limit ? new Color(0.7f, 0.15f, 0.12f) : new Color(0.80f, 0.56f, 0.24f);
+        if (weightFill != null) weightFill.color = total > limit ? UIPalette.Rose : UIPalette.Sage;
         if (weightText != null) weightText.text = $"{total:0}  /  {limit:0}";
     }
 

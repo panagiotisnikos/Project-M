@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f0f1f9ded454b584aa067ce74a354b23, type: 3}
+  m_Name: EncounterComposition_BlockoutTest02_Balanced
+  m_EditorClassIdentifier: Assembly-CSharp::EncounterComposition
+  compositionName: 'Balanced: Stalker + Duelist'
+  spawns:
+  - prefab: {fileID: 1600704797628366664, guid: 53345c4df7784ca4fbcb208972da8d9d, type: 3}
+    spawnPointIndex: 0
+  - prefab: {fileID: 1600704797628366664, guid: b1a581341a9a5184fa5e6ec6c233a52d, type: 3}
+    spawnPointIndex: 1

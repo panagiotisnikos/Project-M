@@ -19,6 +19,10 @@ public class CraftingUI : MonoBehaviour
 
     [SerializeField] private float panelWidth = 620f;
 
+    [Header("Audio")]
+    [SerializeField] private AudioClip craftSuccessSfx;
+    [Range(0f, 1f)] [SerializeField] private float craftSuccessVolume = 0.5f;
+
     private RectTransform panel;
     private GameObject canvasGo;
     private RectTransform contentRt;
@@ -30,7 +34,8 @@ public class CraftingUI : MonoBehaviour
     private static readonly Color StoneTint = new Color(0.62f, 0.63f, 0.68f, 1f);
     private static readonly Color Parch = new Color(0.87f, 0.83f, 0.74f);
     private static readonly Color ParchDim = new Color(0.60f, 0.57f, 0.50f);
-    private static readonly Color Amber = new Color(0.95f, 0.66f, 0.28f);
+    private static readonly Color Title = UIPalette.Lichen;
+    private static readonly Color Accent = UIPalette.Teal;
     private static readonly Color Good = new Color(0.55f, 0.85f, 0.45f);
     private static readonly Color Bad = new Color(0.85f, 0.35f, 0.30f);
 
@@ -127,7 +132,7 @@ public class CraftingUI : MonoBehaviour
         var frImg = fr.gameObject.AddComponent<Image>();
         frImg.sprite = frame; frImg.type = Image.Type.Sliced; frImg.raycastTarget = false;
 
-        headerText = NewText("Header", panel, "CRAFTING", 24, Amber, TextAlignmentOptions.TopLeft);
+        headerText = NewText("Header", panel, "CRAFTING", 24, Title, TextAlignmentOptions.TopLeft);
         headerText.rectTransform.anchorMin = new Vector2(0f, 1f); headerText.rectTransform.anchorMax = new Vector2(1f, 1f);
         headerText.rectTransform.pivot = new Vector2(0f, 1f);
         headerText.rectTransform.anchoredPosition = new Vector2(SidePad, -16f);
@@ -179,6 +184,7 @@ public class CraftingUI : MonoBehaviour
             {
                 if (recipe == null || recipe.output == null) continue;
                 if (!recipe.MatchesStation(currentStation)) continue;
+                if (!recipe.IsUnlocked) continue;
                 AddRecipeRow(recipe, cursorY);
                 cursorY += RowHeight + 8f;
             }
@@ -218,7 +224,7 @@ public class CraftingUI : MonoBehaviour
         iconImg.color = recipe.output.icon != null ? Color.white : new Color(1f, 1f, 1f, 0.15f);
         iconImg.raycastTarget = false;
 
-        var nameText = NewText("Name", rowRt, $"{recipe.output.displayName} x{recipe.outputQuantity}", 17, Amber, TextAlignmentOptions.TopLeft);
+        var nameText = NewText("Name", rowRt, $"{recipe.output.displayName} x{recipe.outputQuantity}", 17, Accent, TextAlignmentOptions.TopLeft);
         nameText.rectTransform.anchorMin = new Vector2(0f, 1f); nameText.rectTransform.anchorMax = new Vector2(1f, 1f);
         nameText.rectTransform.pivot = new Vector2(0f, 1f);
         nameText.rectTransform.anchoredPosition = new Vector2(SidePad + 66f, -8f);
@@ -285,7 +291,9 @@ public class CraftingUI : MonoBehaviour
         recipe.Consume(inv);
         inv.TryAdd(recipe.output, recipe.outputQuantity);
 
-        Debug.Log($"[Crafting] Crafted {recipe.output.displayName} x{recipe.outputQuantity} at " +
+        CombatAudio.PlayUI(craftSuccessSfx, craftSuccessVolume);
+
+        DevLog.Log($"[Crafting] Crafted {recipe.output.displayName} x{recipe.outputQuantity} at " +
                   $"{(currentStation != null ? currentStation.StationName : "?")}.");
 
         RefreshRecipeList();

@@ -51,6 +51,10 @@ public class PlayerAttack : MonoBehaviour
     [SerializeField] private AudioClip lightSwing3Sfx;
     [SerializeField] private AudioClip heavySwingSfx;
     [Range(0f, 1f)] [SerializeField] private float swingVolume = 0.45f;
+    [Tooltip("Plays at the moment the weapon actually connects - distinct from the swing whoosh above.")]
+    [SerializeField] private AudioClip lightImpactSfx;
+    [SerializeField] private AudioClip heavyImpactSfx;
+    [Range(0f, 1f)] [SerializeField] private float impactVolume = 0.5f;
 
     [Header("References")]
     [SerializeField] private LayerMask enemyLayer;
@@ -193,7 +197,7 @@ public class PlayerAttack : MonoBehaviour
 
         TickAttackState();
 
-        if (InventoryUI.IsOpen || CraftingUI.IsOpen)
+        if (InventoryUI.IsOpen || CraftingUI.IsOpen || ProgressionUI.IsOpen)
             return;
 
         ReadAttackInput();
@@ -339,7 +343,7 @@ public class PlayerAttack : MonoBehaviour
 
         BeginAttackWindup();
 
-        Debug.Log(
+        DevLog.Log(
             $"[PlayerAttack] Chained into light attack {currentComboStep}."
         );
     }
@@ -357,7 +361,7 @@ public class PlayerAttack : MonoBehaviour
 
         BeginAttackWindup();
 
-        Debug.Log(
+        DevLog.Log(
             $"[PlayerAttack] Light combo started " +
             $"with {activeWeapon.WeaponName}."
         );
@@ -376,7 +380,7 @@ public class PlayerAttack : MonoBehaviour
 
         BeginAttackWindup();
 
-        Debug.Log(
+        DevLog.Log(
             $"[PlayerAttack] Heavy attack started " +
             $"with {activeWeapon.WeaponName}."
         );
@@ -392,7 +396,7 @@ public class PlayerAttack : MonoBehaviour
 
         nextAttackQueued = true;
 
-        Debug.Log(
+        DevLog.Log(
             $"[PlayerAttack] Light attack " +
             $"{currentComboStep + 1} queued."
         );
@@ -426,7 +430,7 @@ public class PlayerAttack : MonoBehaviour
         {
             CombatAudio.Play(heavySwingSfx, transform.position, swingVolume);
 
-            Debug.Log(
+            DevLog.Log(
                 "[PlayerAttack] Heavy attack animation started."
             );
         }
@@ -437,7 +441,7 @@ public class PlayerAttack : MonoBehaviour
                 transform.position, swingVolume
             );
 
-            Debug.Log(
+            DevLog.Log(
                 $"[PlayerAttack] Light attack " +
                 $"{currentComboStep} animation started."
             );
@@ -513,6 +517,8 @@ public class PlayerAttack : MonoBehaviour
                 -transform.forward
             );
 
+            CombatAudio.Play(heavy ? heavyImpactSfx : lightImpactSfx, contact, impactVolume);
+
             if (CameraShake.Instance != null)
             {
                 CameraShake.Instance.AddTrauma(
@@ -529,14 +535,14 @@ public class PlayerAttack : MonoBehaviour
             if (currentAttackType ==
                 AttackType.Heavy)
             {
-                Debug.Log(
+                DevLog.Log(
                     $"[PlayerAttack] Heavy attack hit " +
                     $"for {currentDamage} damage."
                 );
             }
             else
             {
-                Debug.Log(
+                DevLog.Log(
                     $"[PlayerAttack] Light attack " +
                     $"{currentComboStep} hit " +
                     $"for {currentDamage} damage."
@@ -547,7 +553,7 @@ public class PlayerAttack : MonoBehaviour
         }
         else
         {
-            Debug.Log(
+            DevLog.Log(
                 currentAttackType ==
                 AttackType.Heavy
                     ? "[PlayerAttack] Heavy attack missed."
@@ -580,7 +586,7 @@ public class PlayerAttack : MonoBehaviour
         comboWindowEnd =
             Time.time + recovery / AttackSpeedMultiplier;
 
-        Debug.Log(
+        DevLog.Log(
             currentAttackType ==
             AttackType.Heavy
                 ? "[PlayerAttack] Heavy attack recovery."
@@ -594,13 +600,13 @@ public class PlayerAttack : MonoBehaviour
         if (currentAttackType ==
             AttackType.Heavy)
         {
-            Debug.Log(
+            DevLog.Log(
                 "[PlayerAttack] Heavy attack finished."
             );
         }
         else
         {
-            Debug.Log(
+            DevLog.Log(
                 $"[PlayerAttack] Light combo finished " +
                 $"after attack {currentComboStep}."
             );
@@ -838,7 +844,7 @@ public class PlayerAttack : MonoBehaviour
         if (playerStamina.TrySpend(amount))
             return true;
 
-        Debug.Log(
+        DevLog.Log(
             $"[PlayerAttack] Not enough stamina " +
             $"for {actionName}. " +
             $"Required: {amount:0.0}, " +

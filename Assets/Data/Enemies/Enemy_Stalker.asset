@@ -15,8 +15,23 @@ MonoBehaviour:
   enemyName: Barry the Lizard
   maxHealth: 20
   moveSpeed: 9
+  rotationSpeed: 12
   detectionRange: 12
   losePlayerRange: 28
+  stoppingDistance: 2.6
+  attackHitRange: 3
   attackDamage: 8
   attackWindupDuration: 0.65
   attackRecoveryDuration: 0.6
+  attacks: []
+  staggerDurationMultiplier: 1
+  postAttackVulnerabilityWindow: 0
+  postAttackVulnerabilityMultiplier: 1
+  postAttackBehaviour: 0
+  retreatDistance: 4
+  retreatDuration: 1.2
+  decayedRecoveryMultiplier: 1
+  blossomRecoveryMultiplier: 1
+  balancedVariant: {fileID: 0}
+  blossomVariant: {fileID: 11400000, guid: 1a47562c144bb024cbfe8d6b4e2726b6, type: 2}
+  decayedVariant: {fileID: 11400000, guid: f4bdba9ca05bcca4d914e5469d5d1842, type: 2}

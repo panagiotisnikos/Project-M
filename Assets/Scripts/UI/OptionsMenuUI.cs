@@ -28,7 +28,8 @@ public class OptionsMenuUI : MonoBehaviour
     private static readonly Color StoneTint = new Color(0.62f, 0.63f, 0.68f, 1f);
     private static readonly Color Parch = new Color(0.87f, 0.83f, 0.74f);
     private static readonly Color ParchDim = new Color(0.60f, 0.57f, 0.50f);
-    private static readonly Color Amber = new Color(0.95f, 0.66f, 0.28f);
+    private static readonly Color Title = UIPalette.Lichen;
+    private static readonly Color Accent = UIPalette.Teal;
 
     private TMP_FontAsset anton;
     private float cursorY;
@@ -104,6 +105,7 @@ public class OptionsMenuUI : MonoBehaviour
         canvasGo.AddComponent<CanvasScaler>().uiScaleMode = CanvasScaler.ScaleMode.ConstantPixelSize;
         canvasGo.AddComponent<GraphicRaycaster>();
         canvasGo.AddComponent<UIClickSound>();
+        canvasGo.AddComponent<UIScaleFollower>(); // proves the UI Scale accessibility setting out end to end
 
         var scrim = NewRect("Scrim", canvasGo.transform, Vector2.zero, Vector2.one);
         scrim.offsetMin = Vector2.zero; scrim.offsetMax = Vector2.zero;
@@ -121,7 +123,7 @@ public class OptionsMenuUI : MonoBehaviour
         var frImg = fr.gameObject.AddComponent<Image>();
         frImg.sprite = frame; frImg.type = Image.Type.Sliced; frImg.raycastTarget = false;
 
-        var header = NewText("Header", panel, "OPTIONS", 24, Amber, TextAlignmentOptions.TopLeft);
+        var header = NewText("Header", panel, "OPTIONS", 24, Title, TextAlignmentOptions.TopLeft);
         header.rectTransform.anchorMin = new Vector2(0f, 1f); header.rectTransform.anchorMax = new Vector2(1f, 1f);
         header.rectTransform.pivot = new Vector2(0f, 1f);
         header.rectTransform.anchoredPosition = new Vector2(SidePad, -16f);
@@ -150,6 +152,8 @@ public class OptionsMenuUI : MonoBehaviour
         BuildVideoSection(contentRt);
         BuildControlsSection(contentRt);
         BuildGameplaySection(contentRt);
+        BuildAccessibilitySection(contentRt);
+        BuildKeyBindingsSection(contentRt);
 
         contentRt.sizeDelta = new Vector2(0f, cursorY + SectionGap);
 
@@ -186,13 +190,20 @@ public class OptionsMenuUI : MonoBehaviour
     }
 
     // ------------------------------------------------------------- sections
-    private TMP_Text sectionAudio, masterValueText, musicValueText, sfxValueText;
-    private Slider masterSlider, musicSlider, sfxSlider, sensitivitySlider;
+    private TMP_Text sectionAudio, masterValueText, musicValueText, sfxValueText, ambienceValueText;
+    private Slider masterSlider, musicSlider, sfxSlider, ambienceSlider, sensitivitySlider;
     private TMP_Text sensitivityValueText;
-    private TMP_Text fullscreenValueText, qualityValueText, resolutionValueText;
+    private TMP_Text fullscreenValueText, qualityValueText, resolutionValueText, vSyncValueText;
     private TMP_Text invertYValueText, toastsValueText;
     private int qualityIndex;
     private int resolutionCyclerIndex;
+
+    private TMP_Text shakeValueText, reduceMotionValueText, holdToBlockValueText, uiScaleValueText;
+    private Slider shakeSlider, uiScaleSlider;
+
+    private readonly Dictionary<GameAction, TMP_Text> bindingRowTexts = new Dictionary<GameAction, TMP_Text>();
+    private GameAction? listeningForAction;
+    private static readonly KeyCode[] RebindableKeys = BuildRebindableKeySet();
 
     private void BuildAudioSection(Transform content)
     {
@@ -203,6 +214,8 @@ public class OptionsMenuUI : MonoBehaviour
             v => { GameAudioSettings.SetMusic(v); musicValueText.text = Pct(v); });
         sfxSlider = AddSlider(content, "SFX Volume", GameAudioSettings.Sfx, out sfxValueText,
             v => { GameAudioSettings.SetSfx(v); sfxValueText.text = Pct(v); });
+        ambienceSlider = AddSlider(content, "Ambience Volume", GameAudioSettings.Ambience, out ambienceValueText,
+            v => { GameAudioSettings.SetAmbience(v); ambienceValueText.text = Pct(v); });
     }
 
     private void BuildVideoSection(Transform content)
@@ -231,6 +244,9 @@ public class OptionsMenuUI : MonoBehaviour
                 GameSettings.SetResolutionIndex(resolutionIndexMap[resolutionCyclerIndex]);
                 resolutionValueText.text = ResolutionLabel(resolutionCyclerIndex);
             });
+
+        vSyncValueText = AddToggleRow(content, "VSync", GameSettings.VSyncEnabled,
+            v => GameSettings.SetVSyncEnabled(v));
     }
 
     private void BuildControlsSection(Transform content)
@@ -250,15 +266,122 @@ public class OptionsMenuUI : MonoBehaviour
             v => GameSettings.SetShowToasts(v));
     }
 
+    private void BuildAccessibilitySection(Transform content)
+    {
+        AddSectionHeader(content, "ACCESSIBILITY");
+
+        shakeSlider = AddSlider(content, "Screen Shake", GameSettings.ShakeIntensity, out shakeValueText,
+            v => { GameSettings.SetShakeIntensity(v); shakeValueText.text = Pct(v); });
+
+        reduceMotionValueText = AddToggleRow(content, "Reduce Camera Motion", GameSettings.ReduceCameraMotion,
+            v => GameSettings.SetReduceCameraMotion(v));
+
+        // Deliberately a HOLD/TOGGLE cycler, not an ON/OFF toggle - "ON" would be
+        // ambiguous about which mode it means.
+        holdToBlockValueText = AddCyclerRow(content, "Block Input", GameSettings.HoldToBlock ? "HOLD" : "TOGGLE",
+            dir =>
+            {
+                GameSettings.SetHoldToBlock(!GameSettings.HoldToBlock);
+                holdToBlockValueText.text = GameSettings.HoldToBlock ? "HOLD" : "TOGGLE";
+            });
+
+        uiScaleSlider = AddRangedSlider(content, "UI Scale", 0.85f, 1.25f, GameSettings.UIScale, out uiScaleValueText,
+            v => { GameSettings.SetUIScale(v); uiScaleValueText.text = v.ToString("0.00"); });
+    }
+
+    private void BuildKeyBindingsSection(Transform content)
+    {
+        AddSectionHeader(content, "KEY BINDINGS");
+
+        foreach (var action in KeyBindings.AllActions)
+        {
+            var capturedAction = action;
+            var valueText = AddCyclerlessBindRow(content, KeyBindings.Label(action), KeyBindings.Get(action).ToString(),
+                () => BeginListening(capturedAction));
+            bindingRowTexts[action] = valueText;
+        }
+
+        AddPlainButtonRow(content, "Reset Bindings to Default", () =>
+        {
+            KeyBindings.ResetToDefaults();
+            RefreshKeyBindingRows();
+        });
+    }
+
+    private void RefreshKeyBindingRows()
+    {
+        foreach (var kv in bindingRowTexts)
+            kv.Value.text = KeyBindings.Get(kv.Key).ToString();
+    }
+
+    private void BeginListening(GameAction action)
+    {
+        listeningForAction = action;
+        if (bindingRowTexts.TryGetValue(action, out var text)) text.text = "PRESS A KEY (ESC CANCELS)";
+    }
+
+    private void CancelListening()
+    {
+        if (listeningForAction == null) return;
+        var action = listeningForAction.Value;
+        listeningForAction = null;
+        if (bindingRowTexts.TryGetValue(action, out var text)) text.text = KeyBindings.Get(action).ToString();
+    }
+
+    private void Update()
+    {
+        if (listeningForAction == null) return;
+
+        if (Input.GetKeyDown(KeyCode.Escape))
+        {
+            CancelListening();
+            return;
+        }
+
+        foreach (var key in RebindableKeys)
+        {
+            if (Input.GetKeyDown(key))
+            {
+                KeyBindings.Rebind(listeningForAction.Value, key);
+                listeningForAction = null;
+                RefreshKeyBindingRows();
+                return;
+            }
+        }
+    }
+
+    private static KeyCode[] BuildRebindableKeySet()
+    {
+        // Every keyboard KeyCode except Escape (reserved for "cancel rebind") and the
+        // mouse/joystick codes (out of scope for V1 - see KeyBindings' class doc).
+        var list = new List<KeyCode>();
+        foreach (KeyCode kc in Enum.GetValues(typeof(KeyCode)))
+        {
+            if (kc == KeyCode.Escape) continue;
+            string name = kc.ToString();
+            if (name.StartsWith("Mouse") || name.StartsWith("Joystick")) continue;
+            list.Add(kc);
+        }
+        return list.ToArray();
+    }
+
     private void RefreshAllControls()
     {
         if (masterSlider != null) { masterSlider.SetValueWithoutNotify(GameAudioSettings.Master); masterValueText.text = Pct(GameAudioSettings.Master); }
         if (musicSlider != null) { musicSlider.SetValueWithoutNotify(GameAudioSettings.Music); musicValueText.text = Pct(GameAudioSettings.Music); }
         if (sfxSlider != null) { sfxSlider.SetValueWithoutNotify(GameAudioSettings.Sfx); sfxValueText.text = Pct(GameAudioSettings.Sfx); }
+        if (ambienceSlider != null) { ambienceSlider.SetValueWithoutNotify(GameAudioSettings.Ambience); ambienceValueText.text = Pct(GameAudioSettings.Ambience); }
         if (sensitivitySlider != null) { sensitivitySlider.SetValueWithoutNotify(GameSettings.MouseSensitivity); sensitivityValueText.text = GameSettings.MouseSensitivity.ToString("0.0"); }
         if (fullscreenValueText != null) fullscreenValueText.text = GameSettings.Fullscreen ? "ON" : "OFF";
+        if (vSyncValueText != null) vSyncValueText.text = GameSettings.VSyncEnabled ? "ON" : "OFF";
         if (invertYValueText != null) invertYValueText.text = GameSettings.InvertY ? "ON" : "OFF";
         if (toastsValueText != null) toastsValueText.text = GameSettings.ShowToasts ? "ON" : "OFF";
+        if (shakeSlider != null) { shakeSlider.SetValueWithoutNotify(GameSettings.ShakeIntensity); shakeValueText.text = Pct(GameSettings.ShakeIntensity); }
+        if (reduceMotionValueText != null) reduceMotionValueText.text = GameSettings.ReduceCameraMotion ? "ON" : "OFF";
+        if (holdToBlockValueText != null) holdToBlockValueText.text = GameSettings.HoldToBlock ? "HOLD" : "TOGGLE";
+        if (uiScaleSlider != null) { uiScaleSlider.SetValueWithoutNotify(GameSettings.UIScale); uiScaleValueText.text = GameSettings.UIScale.ToString("0.00"); }
+        RefreshKeyBindingRows();
+        CancelListening();
     }
 
     private int FindResolutionCyclerIndex()
@@ -293,7 +416,7 @@ public class OptionsMenuUI : MonoBehaviour
         rt.anchoredPosition = new Vector2(SidePad, -cursorY);
         rt.sizeDelta = new Vector2(-SidePad * 2f, 24f);
         var t = rt.gameObject.AddComponent<TextMeshProUGUI>();
-        t.text = title; t.fontSize = 15f; t.color = Amber; t.alignment = TextAlignmentOptions.BottomLeft;
+        t.text = title; t.fontSize = 15f; t.color = Title; t.alignment = TextAlignmentOptions.BottomLeft;
         if (anton != null) t.font = anton;
         t.characterSpacing = 6f; t.fontStyle = FontStyles.UpperCase;
 
@@ -302,7 +425,7 @@ public class OptionsMenuUI : MonoBehaviour
         rule.anchoredPosition = new Vector2(SidePad, -cursorY - 22f);
         rule.sizeDelta = new Vector2(-SidePad * 2f, 2f);
         var ruleImg = rule.gameObject.AddComponent<Image>();
-        ruleImg.color = new Color(0.55f, 0.4f, 0.18f, 0.6f);
+        ruleImg.color = new Color(UIPalette.MossDim.r, UIPalette.MossDim.g, UIPalette.MossDim.b, 0.6f);
         ruleImg.raycastTarget = false;
 
         cursorY += 30f;
@@ -346,7 +469,7 @@ public class OptionsMenuUI : MonoBehaviour
         var fillRt = NewRect("Fill", fillAreaRt, Vector2.zero, new Vector2(1f, 1f));
         fillRt.offsetMin = Vector2.zero; fillRt.offsetMax = Vector2.zero;
         var fillImg = fillRt.gameObject.AddComponent<Image>();
-        fillImg.color = new Color(0.80f, 0.56f, 0.24f, 1f);
+        fillImg.color = UIPalette.Sage;
         fillImg.raycastTarget = false;
 
         var slider = sliderRt.gameObject.AddComponent<Slider>();
@@ -379,7 +502,7 @@ public class OptionsMenuUI : MonoBehaviour
         btn.targetGraphic = img;
         SetSpriteState(btn, Spr("ui_button"), Spr("ui_button_hover"));
 
-        var valueText = NewText("Value", btnRt, state ? "ON" : "OFF", 14, Amber, TextAlignmentOptions.Center);
+        var valueText = NewText("Value", btnRt, state ? "ON" : "OFF", 14, Accent, TextAlignmentOptions.Center);
         valueText.raycastTarget = false;
         if (anton != null) valueText.font = anton;
         valueText.characterSpacing = 3f;
@@ -414,6 +537,53 @@ public class OptionsMenuUI : MonoBehaviour
         return valueText;
     }
 
+    /// <summary>A label + a single button showing the current binding; click to start listening
+    /// for a new key. No left/right arrows (rebinding isn't a cycle through fixed values).</summary>
+    private TMP_Text AddCyclerlessBindRow(Transform content, string label, string initialValue, Action onClick)
+    {
+        var rowRt = AddRowRoot(content, label);
+
+        var btnRt = NewRect("Bind", rowRt, new Vector2(0.48f, 0f), new Vector2(0.96f, 1f));
+        btnRt.offsetMin = Vector2.zero; btnRt.offsetMax = Vector2.zero;
+        var img = btnRt.gameObject.AddComponent<Image>();
+        img.sprite = Spr("ui_button"); img.type = Image.Type.Sliced;
+        var btn = btnRt.gameObject.AddComponent<Button>();
+        btn.targetGraphic = img;
+        SetSpriteState(btn, Spr("ui_button"), Spr("ui_button_hover"));
+
+        var valueText = NewText("Value", btnRt, initialValue, 13, Parch, TextAlignmentOptions.Center);
+        valueText.raycastTarget = false;
+        if (anton != null) valueText.font = anton;
+        valueText.characterSpacing = 2f;
+
+        btn.onClick.AddListener(() => onClick());
+
+        return valueText;
+    }
+
+    /// <summary>A full-width action button with no label column (e.g. "Reset Bindings").</summary>
+    private void AddPlainButtonRow(Transform content, string label, Action onClick)
+    {
+        var rowRt = NewRect("Row_" + label, content, new Vector2(0f, 1f), new Vector2(1f, 1f));
+        rowRt.pivot = new Vector2(0f, 1f);
+        rowRt.anchoredPosition = new Vector2(SidePad, -cursorY);
+        rowRt.sizeDelta = new Vector2(-SidePad * 2f, RowHeight);
+        cursorY += RowHeight + 6f;
+
+        var img = rowRt.gameObject.AddComponent<Image>();
+        img.sprite = Spr("ui_button"); img.type = Image.Type.Sliced;
+        var btn = rowRt.gameObject.AddComponent<Button>();
+        btn.targetGraphic = img;
+        SetSpriteState(btn, Spr("ui_button"), Spr("ui_button_hover"));
+        btn.onClick.AddListener(() => onClick());
+
+        var labelText = NewText("Label", rowRt, label, 14, Accent, TextAlignmentOptions.Center);
+        labelText.raycastTarget = false;
+        if (anton != null) labelText.font = anton;
+        labelText.characterSpacing = 3f;
+        labelText.fontStyle = FontStyles.UpperCase;
+    }
+
     private void BuildArrowButton(RectTransform rt, string glyph, Action onClick)
     {
         var img = rt.gameObject.AddComponent<Image>();
@@ -423,7 +593,7 @@ public class OptionsMenuUI : MonoBehaviour
         SetSpriteState(btn, Spr("ui_button"), Spr("ui_button_hover"));
         btn.onClick.AddListener(() => onClick());
 
-        var label = NewText("Label", rt, glyph, 16, Amber, TextAlignmentOptions.Center);
+        var label = NewText("Label", rt, glyph, 16, Accent, TextAlignmentOptions.Center);
         label.raycastTarget = false;
         if (anton != null) label.font = anton;
     }

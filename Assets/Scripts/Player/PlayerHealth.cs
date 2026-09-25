@@ -27,6 +27,8 @@ public class PlayerHealth : MonoBehaviour
              "that passes straight through a held guard reads differently from a clean hit.")]
     [SerializeField] private AudioClip guardBreakSfx;
     [Range(0f, 1f)] [SerializeField] private float guardBreakVolume = 0.55f;
+    [SerializeField] private AudioClip parrySfx;
+    [Range(0f, 1f)] [SerializeField] private float parryVolume = 0.55f;
 
     [Header("References")]
     [SerializeField] private PlayerPerformanceTracker performanceTracker;
@@ -112,7 +114,7 @@ public class PlayerHealth : MonoBehaviour
     if (playerMovement != null &&
         playerMovement.IsInvulnerable)
     {
-        Debug.Log(
+        DevLog.Log(
             "[PlayerHealth] Attack avoided " +
             "with dodge i-frames."
         );
@@ -162,7 +164,7 @@ public class PlayerHealth : MonoBehaviour
             return;
         }
 
-        Debug.Log(
+        DevLog.Log(
             "[PlayerHealth] Parry timing succeeded, " +
             "but there was not enough stamina."
         );
@@ -216,7 +218,7 @@ public class PlayerHealth : MonoBehaviour
                 CameraShake.Instance.AddTrauma(blockTrauma);
             }
 
-            Debug.Log(
+            DevLog.Log(
                 $"[PlayerHealth] BLOCK with " +
                 $"{shield.ShieldName}! " +
                 $"Damage reduced from {damage} " +
@@ -235,7 +237,7 @@ public class PlayerHealth : MonoBehaviour
              */
             CombatAudio.Play(guardBreakSfx, transform.position, guardBreakVolume);
 
-            Debug.Log(
+            DevLog.Log(
                 $"[PlayerHealth] BLOCK FAILED! " +
                 $"Not enough stamina. Required: " +
                 $"{blockStaminaCost:0.0}."
@@ -279,7 +281,7 @@ public class PlayerHealth : MonoBehaviour
         }
     }
 
-    Debug.Log(
+    DevLog.Log(
         $"[PlayerHealth] Health: " +
         $"{currentHealth}/{maxHealth}"
     );
@@ -301,7 +303,7 @@ public class PlayerHealth : MonoBehaviour
         IStaggerable attacker,
         float staggerDuration)
     {
-        Debug.Log(
+        DevLog.Log(
             "[PlayerHealth] PARRY!"
         );
 
@@ -319,6 +321,8 @@ public class PlayerHealth : MonoBehaviour
             transform.position + Vector3.up + transform.forward * 0.6f,
             -transform.forward
         );
+
+        CombatAudio.Play(parrySfx, transform.position, parryVolume);
 
         if (CameraShake.Instance != null)
         {
@@ -410,7 +414,7 @@ public class PlayerHealth : MonoBehaviour
     {
         currentHealth = Mathf.Max(1, Mathf.RoundToInt(maxHealth * 0.3f));
 
-        Debug.Log(
+        DevLog.Log(
             "[PlayerHealth] The hearth ember spared you from death!"
         );
     }
@@ -422,7 +426,7 @@ public class PlayerHealth : MonoBehaviour
 
         isDead = true;
 
-        Debug.Log(
+        DevLog.Log(
             "[PlayerHealth] Player died."
         );
 
@@ -447,7 +451,7 @@ public class PlayerHealth : MonoBehaviour
             performanceTracker.ResumeTracking();
         }
 
-        Debug.Log("[PlayerHealth] Player respawned.");
+        DevLog.Log("[PlayerHealth] Player respawned.");
     }
 
     private void ApplyKnockback(

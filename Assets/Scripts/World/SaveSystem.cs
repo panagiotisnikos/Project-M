@@ -23,7 +23,7 @@ public static class SaveSystem
         {
             string json = JsonUtility.ToJson(data, prettyPrint: true);
             File.WriteAllText(FilePath, json);
-            Debug.Log($"[SaveSystem] Saved to {FilePath}");
+            DevLog.Log($"[SaveSystem] Saved to {FilePath}");
         }
         catch (Exception e)
         {

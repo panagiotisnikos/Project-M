@@ -48,7 +48,7 @@ public class CameraFollow : MonoBehaviour
             return;
 
         // The mouse drives the UI while the pack/crafting panel is open - keep following, stop looking.
-        if (!InventoryUI.IsOpen && !CraftingUI.IsOpen)
+        if (!InventoryUI.IsOpen && !CraftingUI.IsOpen && !ProgressionUI.IsOpen)
         {
             float sensitivity = GameSettings.MouseSensitivity;
             float pitchSign = GameSettings.InvertY ? 1f : -1f;

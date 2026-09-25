@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -20,7 +21,14 @@ public class GameSaveController : MonoBehaviour
     [SerializeField] private Rigidbody playerRigidbody;
     [SerializeField] private BossHealth bossHealth;
     [SerializeField] private Camp[] camps;
+    [SerializeField] private PointOfInterest[] pois;
     [SerializeField] private HearthEmber hearthEmber;
+
+    [Header("Runs")]
+    [Tooltip("Off = every run starts fresh: items, perks, cleared camps and position all reset " +
+             "when the gameplay scene loads, and nothing is written to disk. On = the original " +
+             "save/continue behaviour (auto-save at checkpoints and on quit, auto-load on start).")]
+    [SerializeField] private bool persistBetweenRuns = false;
 
     private bool hasLoadedThisSession;
 
@@ -33,20 +41,33 @@ public class GameSaveController : MonoBehaviour
         if (playerRigidbody == null && playerHealth != null) playerRigidbody = playerHealth.GetComponent<Rigidbody>();
         if (bossHealth == null) bossHealth = FindFirstObjectByType<BossHealth>();
         if (camps == null || camps.Length == 0) camps = FindObjectsByType<Camp>(FindObjectsSortMode.None);
+        if (pois == null || pois.Length == 0) pois = FindObjectsByType<PointOfInterest>(FindObjectsSortMode.None);
         if (hearthEmber == null) hearthEmber = FindFirstObjectByType<HearthEmber>();
     }
 
     private void Start()
     {
-        LoadGame();
+        if (persistBetweenRuns)
+            LoadGame();
+        else
+            SaveSystem.DeleteSave(); // a stale file must never resurrect a previous run
 
         if (camps != null)
             foreach (var camp in camps)
                 if (camp != null)
                     camp.Cleared += OnCheckpoint;
 
+        // Discovery alone doesn't force a checkpoint save (too frequent/low-stakes) -
+        // only Completed, the same "meaningful progress" bar Camp.Cleared sets.
+        if (pois != null)
+            foreach (var poi in pois)
+                if (poi != null)
+                    poi.Completed += OnCheckpoint;
+
         if (bossHealth != null)
             bossHealth.OnBossDefeated += OnCheckpoint;
+
+        ProgressionSystem.Unlocked += OnProgressionCheckpoint;
     }
 
     private void OnDestroy()
@@ -56,8 +77,15 @@ public class GameSaveController : MonoBehaviour
                 if (camp != null)
                     camp.Cleared -= OnCheckpoint;
 
+        if (pois != null)
+            foreach (var poi in pois)
+                if (poi != null)
+                    poi.Completed -= OnCheckpoint;
+
         if (bossHealth != null)
             bossHealth.OnBossDefeated -= OnCheckpoint;
+
+        ProgressionSystem.Unlocked -= OnProgressionCheckpoint;
     }
 
     private void OnApplicationQuit()
@@ -70,12 +98,20 @@ public class GameSaveController : MonoBehaviour
         SaveGame();
     }
 
+    private void OnProgressionCheckpoint(ProgressionUnlock unlock)
+    {
+        SaveGame();
+    }
+
     // ------------------------------------------------------------------
     // Save
     // ------------------------------------------------------------------
 
     public void SaveGame()
     {
+        if (!persistBetweenRuns)
+            return;
+
         var data = new SaveData();
 
         if (playerRigidbody != null)
@@ -93,9 +129,11 @@ public class GameSaveController : MonoBehaviour
         CaptureEquipment(data);
         CapturePerformance(data);
         CaptureCamps(data);
+        CapturePOIs(data);
 
         data.bossDefeated = bossHealth != null && bossHealth.IsDead;
-        data.hasEmberCharge = hearthEmber != null && hearthEmber.HasCharge;
+        data.emberCharges = hearthEmber != null ? hearthEmber.Charges : 0;
+        data.unlockedProgressionIds = new List<string>(ProgressionSystem.UnlockedIds).ToArray();
 
         SaveSystem.Save(data);
     }
@@ -158,6 +196,22 @@ public class GameSaveController : MonoBehaviour
         }
     }
 
+    private void CapturePOIs(SaveData data)
+    {
+        if (pois == null) return;
+
+        data.poiIds = new string[pois.Length];
+        data.poiDiscovered = new bool[pois.Length];
+        data.poiCompleted = new bool[pois.Length];
+
+        for (int i = 0; i < pois.Length; i++)
+        {
+            data.poiIds[i] = pois[i] != null ? pois[i].PoiId : "";
+            data.poiDiscovered[i] = pois[i] != null && pois[i].IsDiscovered;
+            data.poiCompleted[i] = pois[i] != null && pois[i].IsCompleted;
+        }
+    }
+
     // ------------------------------------------------------------------
     // Load
     // ------------------------------------------------------------------
@@ -190,15 +244,20 @@ public class GameSaveController : MonoBehaviour
                 data.cleanDodges, data.blocksHeld, data.hitsTaken, data.damageTaken);
         }
 
+        // Progression must restore BEFORE POIs - a POI's Progression gate (requiredUnlock)
+        // needs ProgressionSystem already populated when RestorePOIs re-syncs its eligibility
+        // cache below, not after.
+        ProgressionSystem.RestoreUnlocked(data.unlockedProgressionIds);
         RestoreCamps(data);
+        RestorePOIs(data);
 
         if (data.bossDefeated && bossHealth != null)
             bossHealth.RestoreDefeated();
 
         if (hearthEmber != null)
-            hearthEmber.SetCharge(data.hasEmberCharge);
+            hearthEmber.SetCharges(data.emberCharges);
 
-        Debug.Log("[GameSaveController] Save loaded.");
+        DevLog.Log("[GameSaveController] Save loaded.");
     }
 
     private void RestoreInventory(SaveData data)
@@ -279,6 +338,28 @@ public class GameSaveController : MonoBehaviour
         foreach (var c in camps)
             if (c != null && c.CampId == id)
                 return c;
+        return null;
+    }
+
+    private void RestorePOIs(SaveData data)
+    {
+        if (pois == null || data.poiIds == null) return;
+
+        for (int i = 0; i < data.poiIds.Length; i++)
+        {
+            PointOfInterest poi = FindPOIById(data.poiIds[i]);
+            if (poi == null) continue;
+
+            poi.RestoreState(data.poiDiscovered[i], data.poiCompleted[i]);
+        }
+    }
+
+    private PointOfInterest FindPOIById(string id)
+    {
+        if (pois == null) return null;
+        foreach (var p in pois)
+            if (p != null && p.PoiId == id)
+                return p;
         return null;
     }
 }

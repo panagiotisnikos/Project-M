@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f5b2733e49a195240b14a290b18bd9c8, type: 3}
+  m_Name: RewardTable_ResourceAlcove
+  m_EditorClassIdentifier: Assembly-CSharp::RewardTable
+  guaranteed:
+  - item: {fileID: 11400000, guid: 3b760b552fe46e54a9dc5267464bfe22, type: 2}
+    min: 2
+    max: 2
+    weight: 0
+  - item: {fileID: 11400000, guid: 52de059eef387ee419eb33b739b1c499, type: 2}
+    min: 1
+    max: 1
+    weight: 0
+  weighted: []
+  rollCount: 0
+  allowRepeats: 1

@@ -143,7 +143,7 @@ public class WorldRegion : MonoBehaviour
 
         currentState = next;
 
-        Debug.Log($"[WorldRegion:{RegionId}] state -> {currentState} (score {committedScore:0.0})");
+        DevLog.Log($"[WorldRegion:{RegionId}] state -> {currentState} (score {committedScore:0.0})");
 
         StateChanged?.Invoke(this, currentState);
     }

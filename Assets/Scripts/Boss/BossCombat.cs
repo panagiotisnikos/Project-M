@@ -229,7 +229,7 @@ public class BossCombat : MonoBehaviour, IStaggerable
         CombatAudio.Play(aggroSfx, transform.position, bossSfxVolume);
         ChangeState(BossState.Idle);
 
-        Debug.Log("[Boss] Fight started.");
+        DevLog.Log("[Boss] Fight started.");
     }
 
     /// <summary>Called by BossHealth when the boss dies.</summary>
@@ -257,7 +257,7 @@ public class BossCombat : MonoBehaviour, IStaggerable
         deathStartScale = transform.localScale;
         deathElapsed = 0f;
 
-        Debug.Log("[Boss] Death sequence started.");
+        DevLog.Log("[Boss] Death sequence started.");
     }
 
     private void Update()
@@ -486,7 +486,7 @@ public class BossCombat : MonoBehaviour, IStaggerable
 
         ChangeState(BossState.Windup);
 
-        Debug.Log($"[Boss] Wind-up: {attack}.");
+        DevLog.Log($"[Boss] Wind-up: {attack}.");
     }
 
     /// <summary>Called from the attack animation's impact frame (via BossAnimationBridge).</summary>
@@ -606,7 +606,7 @@ public class BossCombat : MonoBehaviour, IStaggerable
 
         if (distance > radius + 1f)
         {
-            Debug.Log($"[Boss] {currentAttack} whiffed.");
+            DevLog.Log($"[Boss] {currentAttack} whiffed.");
             return;
         }
 
@@ -617,13 +617,13 @@ public class BossCombat : MonoBehaviour, IStaggerable
             float angle = Vector3.Angle(transform.forward, toPlayer);
             if (angle > sweepArcDegrees * 0.5f)
             {
-                Debug.Log("[Boss] Sweep missed (player behind).");
+                DevLog.Log("[Boss] Sweep missed (player behind).");
                 return;
             }
         }
         else if (Vector3.Distance(player.position, center) > slamRadius)
         {
-            Debug.Log("[Boss] Slam missed (player out of the impact).");
+            DevLog.Log("[Boss] Slam missed (player out of the impact).");
             return;
         }
 
@@ -686,7 +686,7 @@ public class BossCombat : MonoBehaviour, IStaggerable
 
         playerHealth.TakeDamage(damage, direction, this);
 
-        Debug.Log($"[Boss] {currentAttack} connected for {damage}.");
+        DevLog.Log($"[Boss] {currentAttack} connected for {damage}.");
     }
 
     public void Stagger(float duration)
@@ -705,7 +705,7 @@ public class BossCombat : MonoBehaviour, IStaggerable
 
         ChangeState(BossState.Staggered);
 
-        Debug.Log($"[Boss] STAGGERED for {duration:0.00}s.");
+        DevLog.Log($"[Boss] STAGGERED for {duration:0.00}s.");
     }
 
     // --- Phase transition --------------------------------------------
@@ -736,7 +736,7 @@ public class BossCombat : MonoBehaviour, IStaggerable
         stateEndTime = Time.time + phaseTransitionDuration;
         ChangeState(BossState.PhaseTransition);
 
-        Debug.Log("[Boss] Phase transition.");
+        DevLog.Log("[Boss] Phase transition.");
     }
 
     private void FinishPhaseTransition()
@@ -763,7 +763,7 @@ public class BossCombat : MonoBehaviour, IStaggerable
             summoned = true;
         }
 
-        Debug.Log(
+        DevLog.Log(
             $"[Boss] Phase 2. Healed: {healed}, Summoned: {summoned}, " +
             $"Aura: {(bossController != null && bossController.HasDecayAura)}."
         );
@@ -805,7 +805,7 @@ public class BossCombat : MonoBehaviour, IStaggerable
             minion.SetActive(true);
         }
 
-        Debug.Log($"[Boss] Summoned {count} minions.");
+        DevLog.Log($"[Boss] Summoned {count} minions.");
     }
 
     // --- Death out ----------------------------------------------------

@@ -71,7 +71,7 @@ public class BossDecayAura : MonoBehaviour
         if (Vector3.Distance(transform.position, player.position) <= radius)
         {
             playerHealth.TakeDamage(tickDamage, Vector3.zero);
-            Debug.Log($"[Boss] Decay aura ticked {tickDamage}.");
+            DevLog.Log($"[Boss] Decay aura ticked {tickDamage}.");
         }
     }
 

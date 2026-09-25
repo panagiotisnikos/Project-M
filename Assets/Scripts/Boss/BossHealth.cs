@@ -25,6 +25,11 @@ public class BossHealth : MonoBehaviour, IDamageable
     [SerializeField] private BossCombat bossCombat;
     [SerializeField] private DemoObjectiveManager demoObjectiveManager;
 
+    [Header("Reward (optional)")]
+    [Tooltip("Granted once, on a live kill only - not on RestoreDefeated (the fight already " +
+             "happened in a prior session, the reward was already granted then).")]
+    [SerializeField] private RewardSource rewardSource;
+
     private Renderer bossRenderer;
     private Color originalColor;
     private Coroutine hitFlashCoroutine;
@@ -94,7 +99,7 @@ public class BossHealth : MonoBehaviour, IDamageable
 
         StartHitFlash();
 
-        Debug.Log(
+        DevLog.Log(
             $"[Boss] took {damage} damage. " +
             $"HP: {currentHealth}/{maxHealth}"
         );
@@ -158,7 +163,7 @@ public class BossHealth : MonoBehaviour, IDamageable
 
         currentHealth = Mathf.Min(currentHealth + healAmount, maxHealth);
 
-        Debug.Log(
+        DevLog.Log(
             $"[Boss] healed {healAmount}. HP: {currentHealth}/{maxHealth}"
         );
 
@@ -196,7 +201,7 @@ public class BossHealth : MonoBehaviour, IDamageable
 
         isDead = true;
 
-        Debug.Log("[Boss] defeated.");
+        DevLog.Log("[Boss] defeated.");
 
         CombatVfx.Play(
             deathVfx,
@@ -209,6 +214,11 @@ public class BossHealth : MonoBehaviour, IDamageable
         }
 
         OnBossDefeated?.Invoke();
+
+        if (rewardSource != null)
+        {
+            rewardSource.Grant();
+        }
 
         if (bossCombat != null)
         {

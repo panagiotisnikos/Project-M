@@ -84,4 +84,16 @@ public class EnemyData : ScriptableObject
     [Min(0.1f)] public float decayedRecoveryMultiplier = 1f;
     [Tooltip("Multiplies attack recovery duration while the player is standing in a Blossom region. 1 = no effect.")]
     [Min(0.1f)] public float blossomRecoveryMultiplier = 1f;
+
+    [Header("World-State Variants (optional - Adaptive Enemy Variants V1, see EnemyVariantData)")]
+    [Tooltip("Full behavioural override while the player's region reads Balanced. Leave empty to use " +
+             "this archetype's own base stat block above - Balanced is the reference point the other " +
+             "two states diverge from, not a fourth flavor that needs its own asset.")]
+    public EnemyVariantData balancedVariant;
+    [Tooltip("Full behavioural override while the player's region reads Blossom. Leave empty to fall " +
+             "back to the base stat block above.")]
+    public EnemyVariantData blossomVariant;
+    [Tooltip("Full behavioural override while the player's region reads Decayed. Leave empty to fall " +
+             "back to the base stat block above.")]
+    public EnemyVariantData decayedVariant;
 }

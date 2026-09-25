@@ -13,7 +13,6 @@ public class PlayerMovement : MonoBehaviour
     private Vector3 planarVelocity;
 
     [Header("Dodge Roll")]
-    [SerializeField] private KeyCode dodgeKey = KeyCode.Space;
     [Tooltip("Minimum roll speed. The dodge animation's root motion adds to this.")]
     [SerializeField] private float dodgeSpeed = 3f;
     [Tooltip("How long the roll state lasts (input lock). Match the dodge clip length.")]
@@ -29,6 +28,8 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField] private float invulnerabilityDuration = 0.55f;
 
     [SerializeField] private ParticleSystem dodgeVfx;
+    [SerializeField] private AudioClip dodgeSfx;
+    [Range(0f, 1f)] [SerializeField] private float dodgeVolume = 0.4f;
     [SerializeField] private PlayerRootMotion rootMotion;
 
     [Header("References")]
@@ -51,6 +52,7 @@ public class PlayerMovement : MonoBehaviour
     private Vector3 dodgeDirection;
 
     private float parryWindowEndTime;
+    private bool toggledBlockOn; // only meaningful when GameSettings.HoldToBlock is false
     private bool parryConsumed;
 
     private float dodgeStartTime;
@@ -158,9 +160,10 @@ public class PlayerMovement : MonoBehaviour
         }
 
         // Pack/crafting open: WASD still moves, but no blocking / dodging (mouse is on the UI).
-        if (InventoryUI.IsOpen || CraftingUI.IsOpen)
+        if (InventoryUI.IsOpen || CraftingUI.IsOpen || ProgressionUI.IsOpen)
         {
             IsBlocking = false;
+            toggledBlockOn = false;
             return;
         }
 
@@ -249,6 +252,7 @@ public class PlayerMovement : MonoBehaviour
             playerAttack.IsAttacking)
         {
             IsBlocking = false;
+            toggledBlockOn = false;
             ResetParryWindow();
             return;
         }
@@ -263,11 +267,31 @@ public class PlayerMovement : MonoBehaviour
         if (shield == null)
         {
             IsBlocking = false;
+            toggledBlockOn = false;
             ResetParryWindow();
             return;
         }
 
-        if (Input.GetMouseButtonDown(1))
+        // Accessibility: hold (default) or toggle RMB to block. Either way, the parry
+        // window opens on the same edge - the moment guard actually goes up.
+        bool guardRaisedThisFrame;
+        if (GameSettings.HoldToBlock)
+        {
+            guardRaisedThisFrame = Input.GetMouseButtonDown(1);
+            IsBlocking = Input.GetMouseButton(1);
+        }
+        else
+        {
+            guardRaisedThisFrame = false;
+            if (Input.GetMouseButtonDown(1))
+            {
+                toggledBlockOn = !toggledBlockOn;
+                guardRaisedThisFrame = toggledBlockOn;
+            }
+            IsBlocking = toggledBlockOn;
+        }
+
+        if (guardRaisedThisFrame)
         {
             parryWindowEndTime =
                 Time.time +
@@ -275,9 +299,6 @@ public class PlayerMovement : MonoBehaviour
 
             parryConsumed = false;
         }
-
-        IsBlocking =
-            Input.GetMouseButton(1);
 
         if (!IsBlocking)
         {
@@ -287,7 +308,7 @@ public class PlayerMovement : MonoBehaviour
 
     private void TryStartDodge()
     {
-        if (!Input.GetKeyDown(dodgeKey))
+        if (!Input.GetKeyDown(KeyBindings.Get(GameAction.Dodge)))
             return;
 
         if (Time.time < nextDodgeAllowedTime)
@@ -316,7 +337,7 @@ public class PlayerMovement : MonoBehaviour
                 dodgeStaminaCost
             ))
         {
-            Debug.Log(
+            DevLog.Log(
                 $"[PlayerMovement] Not enough stamina " +
                 $"to dodge. Required: " +
                 $"{dodgeStaminaCost:0.0}, " +
@@ -339,6 +360,7 @@ public class PlayerMovement : MonoBehaviour
 
         IsDodging = true;
         IsBlocking = false;
+        toggledBlockOn = false;
 
         remainingAttackStepDistance = 0f;
         attackStepSpeed = 0f;
@@ -372,7 +394,9 @@ public class PlayerMovement : MonoBehaviour
             -dodgeDirection
         );
 
-        Debug.Log(
+        CombatAudio.Play(dodgeSfx, transform.position, dodgeVolume);
+
+        DevLog.Log(
             $"[PlayerMovement] Dodge started. " +
             $"Duration: {dodgeDuration:0.00}s."
         );
@@ -396,7 +420,7 @@ public class PlayerMovement : MonoBehaviour
         rb.linearVelocity =
             Vector3.zero;
 
-        Debug.Log(
+        DevLog.Log(
             "[PlayerMovement] Dodge finished."
         );
     }

@@ -26,11 +26,13 @@ public class DebugHUD : MonoBehaviour
     }
     private void Update()
     {
-        if (Input.GetKeyDown(toggleKey))
+        // Developer-only overlay - Debug.isDebugBuild is true in the Editor and
+        // Development Builds, false in a release build.
+        if (Debug.isDebugBuild && Input.GetKeyDown(toggleKey))
         {
             showDebugHUD = !showDebugHUD;
 
-            Debug.Log(
+            DevLog.Log(
                 $"[DebugHUD] Developer debug " +
                 $"{(showDebugHUD ? "enabled" : "disabled")}."
             );
@@ -39,7 +41,7 @@ public class DebugHUD : MonoBehaviour
     
     private void OnGUI()
     {
-        if (!showDebugHUD)
+        if (!showDebugHUD || !Debug.isDebugBuild)
             return;
 
         GUI.Label(

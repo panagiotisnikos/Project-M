@@ -62,7 +62,10 @@ public class CameraShake : MonoBehaviour
             return;
         }
 
-        float shake = trauma * trauma;
+        // Accessibility: player-controlled intensity knob, plus an extra cut when
+        // "reduce camera motion" is on (kept non-zero rather than a hard disable, so a
+        // parry/hit still reads as something happened without the full-strength shake).
+        float shake = trauma * trauma * GameSettings.ShakeIntensity * (GameSettings.ReduceCameraMotion ? 0.3f : 1f);
 
         CurrentPositionOffset = new Vector3(
             Random.Range(-1f, 1f) * maxPositionOffset * shake,

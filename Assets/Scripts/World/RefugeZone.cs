@@ -72,7 +72,7 @@ public class RefugeZone : MonoBehaviour
         hearthEmber = other.GetComponentInParent<HearthEmber>();
 
         CombatAudio.Play(enterSfx, transform.position, sfxVolume);
-        Debug.Log("[RefugeZone] Entered the refuge - safe.");
+        DevLog.Log("[RefugeZone] Entered the refuge - safe.");
         Entered?.Invoke();
     }
 
@@ -83,7 +83,7 @@ public class RefugeZone : MonoBehaviour
         IsPlayerInside = false;
 
         CombatAudio.Play(exitSfx, transform.position, sfxVolume);
-        Debug.Log("[RefugeZone] Left the refuge.");
+        DevLog.Log("[RefugeZone] Left the refuge.");
         Exited?.Invoke();
     }
 
@@ -95,7 +95,7 @@ public class RefugeZone : MonoBehaviour
 
         ApplyRecovery();
 
-        if (hearthEmber != null && !hearthEmber.HasCharge && continuousInsideTime >= emberGrantDelay)
+        if (hearthEmber != null && hearthEmber.Charges < hearthEmber.MaxCharges && continuousInsideTime >= emberGrantDelay)
             hearthEmber.Grant();
     }
 

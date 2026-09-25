@@ -22,6 +22,8 @@ public class EnemyHealth : MonoBehaviour, IDamageable
     [Tooltip("Role-specific hit reaction (Brute/StalkerGetsHit).")]
     [SerializeField] private AudioClip hitSfx;
     [Range(0f, 1f)] [SerializeField] private float hitVolume = 0.45f;
+    [SerializeField] private AudioClip deathSfx;
+    [Range(0f, 1f)] [SerializeField] private float deathVolume = 0.5f;
 
     [Header("References")]
     [SerializeField] private PlayerPerformanceTracker performanceTracker;
@@ -120,7 +122,7 @@ public class EnemyHealth : MonoBehaviour, IDamageable
 
         StartHitFlash();
 
-        Debug.Log(
+        DevLog.Log(
             $"{gameObject.name} took {damage} damage. " +
             $"HP: {currentHealth}/{maxHealth}"
         );
@@ -212,7 +214,7 @@ public class EnemyHealth : MonoBehaviour, IDamageable
 
         isDead = true;
 
-        Debug.Log($"{gameObject.name} died.");
+        DevLog.Log($"{gameObject.name} died.");
 
         if (performanceTracker != null)
         {
@@ -223,6 +225,8 @@ public class EnemyHealth : MonoBehaviour, IDamageable
             deathVfx,
             transform.position + Vector3.up * 0.9f
         );
+
+        CombatAudio.Play(deathSfx, transform.position, deathVolume);
 
         if (rewardSource != null)
         {

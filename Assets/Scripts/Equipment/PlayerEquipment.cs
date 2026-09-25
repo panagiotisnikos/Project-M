@@ -103,14 +103,14 @@ public class PlayerEquipment : MonoBehaviour
 
         if (weapon != null)
         {
-            Debug.Log(
+            DevLog.Log(
                 $"[PlayerEquipment] Equipped weapon: " +
                 $"{weapon.WeaponName}."
             );
         }
         else
         {
-            Debug.Log(
+            DevLog.Log(
                 "[PlayerEquipment] Weapon unequipped."
             );
         }
@@ -124,14 +124,14 @@ public class PlayerEquipment : MonoBehaviour
 
         if (shield != null)
         {
-            Debug.Log(
+            DevLog.Log(
                 $"[PlayerEquipment] Equipped shield: " +
                 $"{shield.ShieldName}."
             );
         }
         else
         {
-            Debug.Log(
+            DevLog.Log(
                 "[PlayerEquipment] Shield unequipped."
             );
         }
@@ -173,7 +173,7 @@ public class PlayerEquipment : MonoBehaviour
     public void EquipArmorItem(ArmorData armor)
     {
         equippedArmor = armor;
-        Debug.Log(
+        DevLog.Log(
             $"[PlayerEquipment] Equipped armor: " +
             $"{(armor != null ? armor.ArmorName : "None")}."
         );
@@ -205,7 +205,7 @@ public class PlayerEquipment : MonoBehaviour
     {
         if (!CanSwitchLoadout())
         {
-            Debug.Log(
+            DevLog.Log(
                 $"[PlayerEquipment] {loadoutName} switch " +
                 "ignored during a combat action."
             );
@@ -230,7 +230,7 @@ public class PlayerEquipment : MonoBehaviour
         equippedShield =
             shield;
 
-        Debug.Log(
+        DevLog.Log(
             $"[PlayerEquipment] {loadoutName} equipped: " +
             $"{weapon.WeaponName} + " +
             $"{shield.ShieldName}."
@@ -272,7 +272,7 @@ public class PlayerEquipment : MonoBehaviour
                 ? equippedShield.ShieldName
                 : "None";
 
-        Debug.Log(
+        DevLog.Log(
             $"[PlayerEquipment] {prefix}: " +
             $"{weaponName} + {shieldName}."
         );
